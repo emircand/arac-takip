@@ -1,19 +1,77 @@
-import { useState } from 'react'
-import { createTrip } from '../../services/trips'
+import { useState, useEffect } from 'react'
+import { createTrip, updateTrip } from '../../services/trips'
 
 const today = () => new Date().toISOString().split('T')[0]
 
-export default function TripForm({ vehicles }) {
-  const [form, setForm] = useState({
-    arac_id: '',
-    tarih: today(),
-    tonaj: '',
-    rota: '',
-    notlar: '',
-  })
+const EMPTY_FORM = {
+  tarih: today(),
+  bolge: '',
+  cekici_id: '',
+  dorse_id: '',
+  sofor_id: '',
+  cikis_saati: '',
+  donus_saati: '',
+  tonaj: '',
+  cikis_km: '',
+  donus_km: '',
+  sfr_srs: '1',
+  yakit: '',
+  notlar: '',
+}
+
+const inputCls =
+  'w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
+
+function Label({ text, required }) {
+  return (
+    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+      {text} {required && <span className="text-red-400 normal-case tracking-normal">*</span>}
+    </label>
+  )
+}
+
+function Section({ label }) {
+  return (
+    <div className="flex items-center gap-3 pt-3 pb-1">
+      <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest whitespace-nowrap">
+        {label}
+      </span>
+      <div className="flex-1 h-px bg-gray-100" />
+    </div>
+  )
+}
+
+export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, onEditDone, onTripSaved }) {
+  const [form, setForm] = useState(EMPTY_FORM)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
+
+  const isEditing = !!editingTrip
+
+  useEffect(() => {
+    if (editingTrip) {
+      setForm({
+        tarih: editingTrip.tarih || today(),
+        bolge: editingTrip.bolge || '',
+        cekici_id: editingTrip.cekici_id || '',
+        dorse_id: editingTrip.dorse_id || '',
+        sofor_id: editingTrip.sofor_id || '',
+        cikis_saati: editingTrip.cikis_saati?.substring(0, 5) || '',
+        donus_saati: editingTrip.donus_saati?.substring(0, 5) || '',
+        tonaj: editingTrip.tonaj?.toString() || '',
+        cikis_km: editingTrip.cikis_km?.toString() || '',
+        donus_km: editingTrip.donus_km?.toString() || '',
+        sfr_srs: editingTrip.sfr_srs?.toString() || '1',
+        yakit: editingTrip.yakit?.toString() || '',
+        notlar: editingTrip.notlar || '',
+      })
+      setError(null)
+      setSuccess(false)
+    } else {
+      setForm(EMPTY_FORM)
+    }
+  }, [editingTrip])
 
   function handleChange(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -21,18 +79,54 @@ export default function TripForm({ vehicles }) {
     setSuccess(false)
   }
 
+  function validate() {
+    const { tarih, bolge, cekici_id, dorse_id, sofor_id, cikis_saati, donus_saati, tonaj, cikis_km, donus_km } = form
+    if (!tarih || !bolge || !cekici_id || !dorse_id || !sofor_id || !cikis_saati || !donus_saati || !tonaj || !cikis_km || !donus_km) {
+      return 'Lütfen tüm zorunlu alanları doldurun.'
+    }
+    return null
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!form.arac_id || !form.tarih || !form.tonaj || !form.rota) {
-      setError('Lütfen zorunlu alanları doldurun.')
-      return
-    }
+    const err = validate()
+    if (err) { setError(err); return }
     setLoading(true)
     setError(null)
+
+    const payload = {
+      tarih: form.tarih,
+      bolge: form.bolge,
+      cekici_id: form.cekici_id,
+      dorse_id: form.dorse_id,
+      sofor_id: form.sofor_id,
+      cikis_saati: form.cikis_saati,
+      donus_saati: form.donus_saati,
+      tonaj: Number(form.tonaj),
+      cikis_km: Number(form.cikis_km),
+      donus_km: Number(form.donus_km),
+      sfr_srs: Number(form.sfr_srs) || 1,
+      sfr: 1,
+      yakit: form.yakit ? Number(form.yakit) : null,
+      notlar: form.notlar || null,
+    }
+
     try {
-      await createTrip({ ...form, tonaj: Number(form.tonaj) })
-      setSuccess(true)
-      setForm({ arac_id: form.arac_id, tarih: today(), tonaj: '', rota: '', notlar: '' })
+      if (isEditing) {
+        await updateTrip(editingTrip.id, payload)
+        onEditDone?.()
+      } else {
+        await createTrip(payload)
+        setSuccess(true)
+        setForm((prev) => ({
+          ...EMPTY_FORM,
+          tarih: prev.tarih,
+          cekici_id: prev.cekici_id,
+          dorse_id: prev.dorse_id,
+          sofor_id: prev.sofor_id,
+        }))
+        onTripSaved?.()
+      }
     } catch (err) {
       setError(err.message || 'Kayıt sırasında bir hata oluştu.')
     } finally {
@@ -41,106 +135,137 @@ export default function TripForm({ vehicles }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-3">
+      {isEditing && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-2.5 text-sm">
+          <span className="text-base">✏️</span>
+          <span>
+            <b>{editingTrip.tarih}</b> tarihli sefer düzenleniyor
+          </span>
+        </div>
+      )}
+
+      {/* ── GÜZERGAH ─────────────────────────────────── */}
+      <Section label="Güzergah" />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label text="Tarih" required />
+          <input type="date" name="tarih" value={form.tarih} onChange={handleChange} className={inputCls} required />
+        </div>
+        <div>
+          <Label text="Bölge" required />
+          <input type="text" name="bolge" value={form.bolge} onChange={handleChange} placeholder="Kadıköy" className={inputCls} required />
+        </div>
+      </div>
+
+      {/* ── ARAÇ ─────────────────────────────────────── */}
+      <Section label="Araç" />
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Araç <span className="text-red-500">*</span>
-        </label>
-        <select
-          name="arac_id"
-          value={form.arac_id}
-          onChange={handleChange}
-          className="w-full border border-gray-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        >
-          <option value="">-- Araç seçin --</option>
-          {vehicles.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.plaka} — {v.sofor_adi}
-            </option>
+        <Label text="Çekici" required />
+        <select name="cekici_id" value={form.cekici_id} onChange={handleChange} className={inputCls} required>
+          <option value="">— Çekici seçin —</option>
+          {cekiciler.map((c) => (
+            <option key={c.id} value={c.id}>{c.plaka}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label text="Dorse" required />
+        <select name="dorse_id" value={form.dorse_id} onChange={handleChange} className={inputCls} required>
+          <option value="">— Dorse seçin —</option>
+          {dorseler.map((d) => (
+            <option key={d.id} value={d.id}>{d.plaka}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label text="Şoför" required />
+        <select name="sofor_id" value={form.sofor_id} onChange={handleChange} className={inputCls} required>
+          <option value="">— Şoför seçin —</option>
+          {soforler.map((s) => (
+            <option key={s.id} value={s.id}>{s.ad_soyad}</option>
           ))}
         </select>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Tarih <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="date"
-          name="tarih"
-          value={form.tarih}
-          onChange={handleChange}
-          className="w-full border border-gray-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
+      {/* ── SAAT ─────────────────────────────────────── */}
+      <Section label="Saat" />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label text="Çıkış" required />
+          <input type="time" name="cikis_saati" value={form.cikis_saati} onChange={handleChange} className={inputCls} required />
+        </div>
+        <div>
+          <Label text="Dönüş" required />
+          <input type="time" name="donus_saati" value={form.donus_saati} onChange={handleChange} className={inputCls} required />
+        </div>
       </div>
 
+      {/* ── YÜK & KM ─────────────────────────────────── */}
+      <Section label="Yük & KM" />
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Tonaj (ton) <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="number"
-          name="tonaj"
-          value={form.tonaj}
-          onChange={handleChange}
-          placeholder="0.0"
-          step="0.1"
-          min="0"
-          className="w-full border border-gray-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
+        <Label text="Tonaj (ton)" required />
+        <input type="number" name="tonaj" value={form.tonaj} onChange={handleChange} placeholder="0.000" step="0.001" min="0" className={inputCls} required />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label text="Çıkış KM" required />
+          <input type="number" name="cikis_km" value={form.cikis_km} onChange={handleChange} placeholder="0" min="0" className={inputCls} required />
+        </div>
+        <div>
+          <Label text="Dönüş KM" required />
+          <input type="number" name="donus_km" value={form.donus_km} onChange={handleChange} placeholder="0" min="0" className={inputCls} required />
+        </div>
       </div>
 
+      {/* ── EK BİLGİ ─────────────────────────────────── */}
+      <Section label="Ek Bilgi" />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label text="Sefer Sırası" />
+          <input type="number" name="sfr_srs" value={form.sfr_srs} onChange={handleChange} min="1" className={inputCls} />
+        </div>
+        <div>
+          <Label text="Yakıt (litre)" />
+          <input type="number" name="yakit" value={form.yakit} onChange={handleChange} placeholder="—" step="0.01" min="0" className={inputCls} />
+        </div>
+      </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Rota / Bölge <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          name="rota"
-          value={form.rota}
-          onChange={handleChange}
-          placeholder="örn. Kadıköy Güney"
-          className="w-full border border-gray-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
+        <Label text="Notlar" />
+        <textarea name="notlar" value={form.notlar} onChange={handleChange} placeholder="İsteğe bağlı not..." rows={2} className={`${inputCls} resize-none`} />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Notlar
-        </label>
-        <textarea
-          name="notlar"
-          value={form.notlar}
-          onChange={handleChange}
-          placeholder="İsteğe bağlı not..."
-          rows={2}
-          className="w-full border border-gray-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-        />
-      </div>
-
+      {/* Geri bildirimler */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
-          {error}
+        <div className="flex items-start gap-2 bg-red-50 border border-red-100 text-red-600 rounded-xl px-4 py-3 text-sm">
+          <span className="mt-0.5">⚠</span> {error}
         </div>
       )}
-
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-3 text-sm font-medium">
-          ✓ Sefer başarıyla kaydedildi!
+        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl px-4 py-3 text-sm font-medium">
+          <span>✓</span> Sefer başarıyla kaydedildi!
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 rounded-lg text-base transition-colors"
-      >
-        {loading ? 'Kaydediliyor...' : 'Sefer Kaydet'}
-      </button>
+      {/* Butonlar */}
+      <div className="flex gap-2 pt-1">
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-300 text-white font-semibold rounded-xl text-sm transition-colors"
+        >
+          {loading ? 'Kaydediliyor...' : isEditing ? '✓ Güncelle' : 'Sefer Kaydet'}
+        </button>
+        {isEditing && (
+          <button
+            type="button"
+            onClick={() => onEditDone?.()}
+            className="px-5 py-3.5 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 font-medium text-sm transition-colors"
+          >
+            İptal
+          </button>
+        )}
+      </div>
     </form>
   )
 }

@@ -1,38 +1,47 @@
-function Card({ title, value, sub, color }) {
-  const colors = {
-    blue: 'bg-blue-50 border-blue-200 text-blue-700',
-    green: 'bg-green-50 border-green-200 text-green-700',
-    orange: 'bg-orange-50 border-orange-200 text-orange-700',
-  }
+function Card({ title, value, icon, bg, text }) {
   return (
-    <div className={`border rounded-xl p-4 ${colors[color]}`}>
-      <p className="text-xs font-semibold uppercase tracking-wide opacity-70">{title}</p>
-      <p className="text-3xl font-bold mt-1">{value}</p>
-      {sub && <p className="text-xs mt-1 opacity-60">{sub}</p>}
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4">
+      <div className={`${bg} rounded-xl w-11 h-11 flex items-center justify-center text-xl shrink-0`}>
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide truncate">{title}</p>
+        <p className={`text-xl font-bold mt-0.5 ${text}`}>{value}</p>
+      </div>
     </div>
   )
 }
 
-export default function SummaryCards({ vehicleCount, todayTripCount, todayTotalTonaj }) {
+export default function SummaryCards({ tripCount, totalTonaj, totalKm, totalYakit }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 gap-3">
       <Card
-        title="Aktif Araç"
-        value={vehicleCount}
-        sub="toplam filodaki araç"
-        color="blue"
+        title="Sefer"
+        value={tripCount}
+        icon="🚛"
+        bg="bg-emerald-50"
+        text="text-emerald-700"
       />
       <Card
-        title="Bugünkü Sefer"
-        value={todayTripCount}
-        sub="bugün yapılan sefer sayısı"
-        color="green"
+        title="Tonaj"
+        value={`${totalTonaj.toFixed(1)} t`}
+        icon="⚖️"
+        bg="bg-orange-50"
+        text="text-orange-600"
       />
       <Card
-        title="Bugünkü Tonaj"
-        value={`${todayTotalTonaj.toFixed(1)} t`}
-        sub="bugün toplam taşınan"
-        color="orange"
+        title="KM"
+        value={totalKm.toLocaleString('tr-TR')}
+        icon="📍"
+        bg="bg-blue-50"
+        text="text-blue-700"
+      />
+      <Card
+        title="Yakıt"
+        value={totalYakit > 0 ? `${totalYakit.toFixed(0)} L` : '—'}
+        icon="⛽"
+        bg="bg-violet-50"
+        text="text-violet-700"
       />
     </div>
   )
