@@ -4,17 +4,22 @@
 
 ## Özellikler
 
-- **Authentication** — Supabase Auth tabanlı, iki rol: `saha` ve `yonetici`
+- **Authentication** — JWT tabanlı, iki rol: `saha` ve `yonetici`
 - **Saha Ekranı** — Çekici + dorse + şoför kombinasyonuyla sefer girişi. Son 20 sefer listesi, düzenleme ve silme. Mobil öncelikli tasarım.
 - **Tanımlar** — Şoför, çekici ve dorse kayıtlarını yönet; aktif/pasif durumu değiştir.
 - **Dashboard** (yönetici) — Bugünün özet kartları + Bugün/Bu Hafta/Bu Ay dönem filtresiyle bölge, çekici ve şoför bazlı tablolar.
-- **Supabase Backend** — Postgres tabanlı veri, RLS ile güvenli REST API erişimi.
 
 ## Teknoloji
 
+**Frontend**
 - [React 19](https://react.dev) + [Vite 7](https://vite.dev)
-- [Supabase](https://supabase.com) (Postgres + Auth + REST API)
 - [Tailwind CSS v4](https://tailwindcss.com)
+
+**Backend**
+- [Spring Boot 3.4](https://spring.io/projects/spring-boot) (Java 21)
+- Spring Security 6 — stateless, JWT
+- Spring Data JPA + Hibernate 6
+- PostgreSQL via [Supabase](https://supabase.com)
 
 ## Kurulum
 
@@ -25,19 +30,14 @@ git clone https://github.com/kullanici/arac-takip.git
 cd arac-takip
 ```
 
-### 2. Bağımlılıkları yükleyin
+### 2. Frontend
 
 ```bash
+cd frontend
 npm install
 ```
 
-### 3. Ortam değişkenlerini ayarlayın
-
-```bash
-cp .env.example .env
-```
-
-`.env` dosyasını açıp Supabase bilgilerinizi girin:
+`frontend/.env` dosyasını oluşturun:
 
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
@@ -45,6 +45,32 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 > Supabase Dashboard → Settings → API → **anon / public** key
+
+```bash
+npm run dev
+# http://localhost:5173
+```
+
+### 3. Backend
+
+`backend/.env` dosyasını oluşturun:
+
+```env
+DATABASE_JDBC_URL=jdbc:postgresql://aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
+DATABASE_POOLER_USER=postgres.<project-ref>
+DATABASE_PASSWORD=your-db-password
+JWT_SECRET=your-base64-secret
+SUPABASE_ANON_KEY=your-anon-key
+```
+
+> Supabase Dashboard → Settings → Database → **Connection pooling** (Transaction mode, port 6543 veya 5432)
+
+```bash
+cd backend
+set -a && source .env && set +a
+mvn spring-boot:run
+# http://localhost:8080
+```
 
 ### 4. Supabase tablolarını oluşturun
 
@@ -104,16 +130,6 @@ create table seferler (
 );
 ```
 
-RLS politikalarını ve kullanıcı kayıt trigger'larını Supabase Dashboard üzerinden ayarlayın.
-
-### 5. Geliştirme sunucusunu başlatın
-
-```bash
-npm run dev
-```
-
-Uygulama `http://localhost:5173` adresinde açılır.
-
 ## Sayfa Erişimi
 
 | Sayfa | saha | yonetici |
@@ -122,37 +138,40 @@ Uygulama `http://localhost:5173` adresinde açılır.
 | `/saha` | ✓ | ✓ |
 | `/tanimlar` | ✓ | ✓ |
 | `/dashboard` | — | ✓ |
+| `/kullanicilar` | — | ✓ |
 
 ## Proje Yapısı
 
 ```
-src/
-├── contexts/
-│   └── AuthContext.jsx          # Session + profil (rol dahil)
-├── lib/
-│   └── supabaseClient.js        # Supabase bağlantısı
-├── services/
-│   ├── trips.js                 # Sefer sorguları
-│   ├── soforler.js              # Şoför sorguları
-│   ├── cekiciler.js             # Çekici sorguları
-│   └── dorseler.js              # Dorse sorguları
-├── components/
-│   ├── NavBar/                  # Rol bazlı navigasyon
-│   ├── ProtectedRoute/          # Auth + rol yönlendirme
-│   ├── TripForm/                # Sefer giriş formu
-│   ├── RecentTripsList/         # Son 20 sefer listesi
-│   └── SummaryCards/            # Dashboard özet kartları
-└── pages/
-    ├── LoginPage/               # Giriş ekranı
-    ├── FieldPage/               # Saha ekranı (/saha)
-    ├── TanimlarPage/            # Şoför/çekici/dorse tanımları
-    └── DashboardPage/           # Yönetici dashboard
+arac-takip/
+├── frontend/
+│   └── src/
+│       ├── contexts/
+│       │   └── AuthContext.jsx          # Session + profil (rol dahil)
+│       ├── lib/
+│       │   └── supabaseClient.js        # Supabase bağlantısı
+│       ├── services/                    # Supabase sorguları (sefer, şoför, çekici, dorse)
+│       ├── components/
+│       │   ├── NavBar/                  # Rol bazlı navigasyon
+│       │   ├── ProtectedRoute/          # Auth + rol yönlendirme
+│       │   ├── TripForm/                # Sefer giriş formu
+│       │   ├── RecentTripsList/         # Son 20 sefer listesi
+│       │   └── SummaryCards/            # Dashboard özet kartları
+│       └── pages/
+│           ├── LoginPage/
+│           ├── FieldPage/               # /saha
+│           ├── TanimlarPage/            # /tanimlar
+│           ├── DashboardPage/           # /dashboard
+│           └── KullanicilarPage/        # /kullanicilar
+└── backend/
+    └── src/main/java/com/aractakip/
+        ├── auth/                        # JWT üretimi, filtre, Supabase auth entegrasyonu
+        ├── config/                      # Security, CORS
+        ├── common/                      # ApiResponse, GlobalExceptionHandler
+        ├── sefer/                       # Sefer entity, repo, service, controller
+        ├── sofor/                       # Şoför entity, repo, service, controller
+        ├── cekici/                      # Çekici entity, repo, service, controller
+        ├── dorse/                       # Dorse entity, repo, service, controller
+        ├── profil/                      # Profil entity, repo
+        └── dashboard/                   # Özet sorgular (bölge, çekici, şoför bazlı)
 ```
-
-## Veri Modeli
-
-**profiller** — kullanıcı adı, rol (`saha` / `yonetici`)
-**soforler** — ad soyad, telefon, aktif
-**cekiciler** — plaka, araç tipi, aktif
-**dorseler** — plaka, aktif
-**seferler** — tarih, bölge, çekici, dorse, şoför, çıkış/dönüş saati, tonaj, km, yakıt, notlar
