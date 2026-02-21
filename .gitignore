@@ -20,6 +20,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# Backend build output
+backend/target/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

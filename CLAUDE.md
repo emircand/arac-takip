@@ -1,177 +1,266 @@
-# Araç Takip Uygulaması — Proje Bilgileri
+# Araç Takip — CLAUDE.md
 
-## Proje Hakkında
-Çöp toplama şirketinin araç ve sefer operasyonlarını takip etmek için geliştirilmiş web uygulaması.
-Saha personeli mobil üzerinden veri girer, yöneticiler hem veri girer hem dashboard'dan takip eder.
-Authentication zorunludur — iki rol vardır: `saha` ve `yonetici`.
+## ÖNEMLİ: Bu dosyayı her oturumda baştan sona oku
 
-## Operasyonel Yapı
-- Her sefer bir **çekici** + bir **dorse** kombinasyonundan oluşur
-- Çekici ve dorse ayrı plakalı, bağımsız takip edilir
-- Aynı çekiciye farklı şoförler binebilir (vardiya sistemi)
-- Aynı şoför farklı araçlara binebilir
-- Günde birden fazla sefer yapılabilir (SFR SRS ile sıralanır)
-- Yakıt bazen sefer bazında, bazen ayrı girilir
+---
 
-## Stack
-- **Frontend:** React + Vite
-- **Backend/DB:** Supabase (Postgres + REST API + Auth)
-- **Styling:** Tailwind CSS
-- **State:** React Context (auth state için), local state (component bazlı)
+## Proje Yapısı (Monorepo)
 
-## Supabase Bağlantısı
-- Supabase URL ve anon key `.env` dosyasında tutulur
-- `.env` dosyası: `VITE_SUPABASE_URL` ve `VITE_SUPABASE_ANON_KEY`
-- `.env` dosyasını asla commit etme, `.gitignore`'a ekle
-- Supabase client: `src/lib/supabaseClient.js`
-- Service role key asla frontend'de kullanılmaz
+```
+arac-takip/
+├── frontend/          ← Mevcut React uygulaması (buraya taşındı)
+├── backend/           ← YENİ Spring Boot uygulaması
+└── CLAUDE.md
+```
 
-## Authentication Yapısı
+---
 
-### Kullanıcı Rolleri
-- `saha` → tüm veri girişlerini yapabilir (sefer, şoför, çekici, dorse)
-- `yonetici` → saha personelinin yapabildiği her şeyi yapabilir + dashboard + kullanıcı yönetimi
+## Frontend — Mevcut Durum (README'ye göre TAMAMLANDI)
 
-### Rol Nasıl Tutulur
-- `profiller` tablosunda `rol` alanında tutulur
-- Kullanıcı kendi rolünü değiştiremez — sadece yönetici değiştirebilir
-- Yeni kullanıcı kaydı yoktur, hesapları yönetici oluşturur
+### Çalışan özellikler
+- React 19 + Vite 7 + Tailwind CSS v4
+- Supabase Auth — iki rol: `saha`, `yonetici`
+- `AuthContext.jsx` → session + profil (rol dahil)
+- `ProtectedRoute` → auth + rol yönlendirme
+- `/login` → email + şifre
+- `/saha` → sefer giriş formu (çekici + dorse + şoför + tüm alanlar), son 20 sefer listesi
+- `/tanimlar` → şoför / çekici / dorse CRUD
+- `/dashboard` → özet kartlar + bölge/çekici/şoför bazlı tablolar (sadece yönetici)
 
-### React Tarafında Auth Akışı
-- `src/contexts/AuthContext.jsx` → session ve profil bilgisini (rol dahil) tüm app'e sağlar
-- `src/components/ProtectedRoute/index.jsx` → role göre yönlendirme yapar
-- Login sonrası: her iki rol de `/saha` ana sayfasına gider
-- Yöneticide ek olarak nav'da Dashboard linki görünür
-- Auth yoksa tüm route'lar `/login`'e yönlendirir
+### Frontend klasör yapısı
+```
+frontend/src/
+├── contexts/AuthContext.jsx
+├── lib/supabaseClient.js
+├── services/
+│   ├── trips.js
+│   ├── soforler.js
+│   ├── cekiciler.js
+│   └── dorseler.js
+├── components/
+│   ├── NavBar/
+│   ├── ProtectedRoute/
+│   ├── TripForm/
+│   ├── RecentTripsList/
+│   └── SummaryCards/
+└── pages/
+    ├── LoginPage/
+    ├── FieldPage/
+    ├── TanimlarPage/
+    └── DashboardPage/
+```
 
-### Sayfa Erişim Kuralları
-| Sayfa | saha | yonetici |
-|-------|------|----------|
-| /login | ✓ | ✓ |
-| /saha | ✓ | ✓ |
-| /tanimlar | ✓ | ✓ |
-| /dashboard | ✗ | ✓ |
-| /kullanicilar | ✗ | ✓ |
+### Frontend veritabanı (Supabase — mevcut)
+```
+profiller  → id (auth.users), ad_soyad, rol
+soforler   → id, ad_soyad, telefon, aktif
+cekiciler  → id, plaka, arac_tipi, aktif
+dorseler   → id, plaka, aktif
+seferler   → id, girdi_yapan, tarih, bolge,
+             cekici_id, dorse_id, sofor_id,
+             cikis_saati, donus_saati, sfr_suresi (generated),
+             tonaj, cikis_km, donus_km, km (generated),
+             sfr_srs, sfr, yakit, notlar
+```
 
-## Veri Modeli
+---
 
-### profiller
-| alan | tip | açıklama |
-|------|-----|----------|
-| id | uuid (PK) | auth.users.id ile aynı |
-| ad_soyad | text | |
-| rol | text | 'saha' veya 'yonetici' |
+## Backend — Hedef (Spring Boot)
 
-### soforler
-| alan | tip | açıklama |
-|------|-----|----------|
-| id | uuid (PK) | |
-| ad_soyad | text | |
-| telefon | text | opsiyonel |
-| aktif | boolean | |
+### Neden Spring Boot?
+- Multi-tenant mimari (çoklu firma desteği)
+- Özelleştirilebilir raporlama ve anomali tespiti (ileriki aşama)
+- React frontend Supabase yerine Spring API'yi çağıracak
+- Auth: Spring Security + JWT (Supabase Auth'un yerine geçer)
 
-### cekiciler
-| alan | tip | açıklama |
-|------|-----|----------|
-| id | uuid (PK) | |
-| plaka | text | unique |
-| arac_tipi | text | varsayılan 'Çekici' |
-| aktif | boolean | |
+### Backend klasör yapısı
+```
+backend/
+├── src/main/java/com/aractakip/
+│   ├── AracTakipApplication.java
+│   ├── config/
+│   │   ├── SecurityConfig.java       # JWT + CORS
+│   │   └── JwtConfig.java
+│   ├── auth/
+│   │   ├── AuthController.java       # POST /api/auth/login, /refresh
+│   │   ├── AuthService.java
+│   │   └── JwtUtil.java
+│   ├── common/
+│   │   └── TenantContext.java        # Multi-tenant için firma_id thread-local
+│   ├── sefer/
+│   │   ├── Sefer.java                # Entity
+│   │   ├── SeferRepository.java
+│   │   ├── SeferService.java
+│   │   └── SeferController.java     # /api/seferler
+│   ├── sofor/
+│   │   ├── Sofor.java
+│   │   ├── SoforRepository.java
+│   │   ├── SoforService.java
+│   │   └── SoforController.java     # /api/soforler
+│   ├── cekici/
+│   │   ├── Cekici.java
+│   │   ├── CekiciRepository.java
+│   │   ├── CekiciService.java
+│   │   └── CekiciController.java    # /api/cekiciler
+│   ├── dorse/
+│   │   ├── Dorse.java
+│   │   ├── DorseRepository.java
+│   │   ├── DorseService.java
+│   │   └── DorseController.java     # /api/dorseler
+│   └── dashboard/
+│       ├── DashboardService.java
+│       └── DashboardController.java  # /api/dashboard/ozet, /bolge, /cekici, /sofor
+├── src/main/resources/
+│   └── application.yml
+└── pom.xml
+```
 
-### dorseler
-| alan | tip | açıklama |
-|------|-----|----------|
-| id | uuid (PK) | |
-| plaka | text | unique |
-| aktif | boolean | |
+### Backend tech stack
+```
+Java 21
+Spring Boot 3.x
+Spring Security + JWT (jjwt)
+Spring Data JPA
+PostgreSQL (aynı DB — Supabase'in Postgres'i)
+Maven
+```
 
-### seferler (ana tablo)
-| alan | tip | açıklama |
-|------|-----|----------|
-| id | uuid (PK) | |
-| girdi_yapan | uuid (FK) | auth.users.id |
-| tarih | date | |
-| bolge | text | |
-| cekici_id | uuid (FK) | cekiciler tablosuna |
-| dorse_id | uuid (FK) | dorseler tablosuna |
-| sofor_id | uuid (FK) | soforler tablosuna |
-| cikis_saati | time | |
-| donus_saati | time | |
-| sfr_suresi | interval | otomatik hesaplanır (generated) |
-| tonaj | numeric(10,3) | |
-| cikis_km | integer | |
-| donus_km | integer | |
-| km | integer | otomatik hesaplanır (generated) |
-| sfr_srs | integer | günlük sefer sırası |
-| sfr | integer | sefer sayısı (genellikle 1) |
-| yakit | numeric(8,2) | litre, opsiyonel |
-| notlar | text | |
+### API endpoint listesi
 
-## Ekranlar
+**Auth**
+```
+POST /api/auth/login        → { email, password } → { token, rol, adSoyad }
+POST /api/auth/refresh      → token yenile
+```
 
-### /login
-- Email + şifre formu
-- Hata mesajı göster
-- Kayıt formu yok
+**Seferler**
+```
+GET    /api/seferler                  → liste (filtreler: tarih, bolge, cekici_id, sofor_id)
+GET    /api/seferler/:id              → tek kayıt
+POST   /api/seferler                  → yeni sefer
+PUT    /api/seferler/:id              → güncelle (sadece girdi_yapan veya yonetici)
+DELETE /api/seferler/:id              → sil (sadece girdi_yapan veya yonetici)
+```
 
-### /saha (saha + yonetici, mobil öncelikli)
-- Sefer giriş formu:
-  - Tarih, Bölge
-  - Çekici seç (dropdown)
-  - Dorse seç (dropdown)
-  - Şoför seç (dropdown)
-  - Çıkış saati, Dönüş saati
-  - Tonaj
-  - Çıkış KM, Dönüş KM
-  - Yakıt (opsiyonel)
-  - Notlar
-- Son 20 seferin listesi (tarih, bölge, çekici, şoför, tonaj)
-- Girilen kaydı düzenleme / silme
+**Şoförler / Çekiciler / Dorseler**
+```
+GET    /api/soforler                  → liste (aktif filtresi)
+POST   /api/soforler                  → ekle
+PUT    /api/soforler/:id              → güncelle
+PATCH  /api/soforler/:id/aktif        → aktif/pasif toggle
 
-### /tanimlar (saha + yonetici)
-- Şoför listesi: ekle, düzenle, aktif/pasif
-- Çekici listesi: ekle, düzenle, aktif/pasif
-- Dorse listesi: ekle, düzenle, aktif/pasif
+(cekiciler ve dorseler aynı pattern)
+```
 
-### /dashboard (sadece yonetici)
-**Özet kartlar (bugün):**
-- Toplam sefer sayısı
-- Toplam tonaj
-- Toplam km
-- Toplam yakıt
+**Dashboard**
+```
+GET /api/dashboard/ozet?donem=bugun|haftabugun|aybugun|ozel&baslangic=&bitis=
+GET /api/dashboard/bolge?...
+GET /api/dashboard/cekici?...
+GET /api/dashboard/sofor?...
+```
 
-**Filtreler:**
-- Tarih aralığı (bugün / bu hafta / bu ay / özel)
-- Bölge filtresi
-- Çekici filtresi
-- Şoför filtresi
+### Güvenlik kuralları (Spring Security)
+- JWT token header: `Authorization: Bearer <token>`
+- `saha` rolü: GET + POST + PUT/DELETE (kendi kaydı)
+- `yonetici` rolü: her şey
+- `/api/auth/**` → herkese açık
+- Diğer tüm endpoint'ler → token zorunlu
 
-**Tablolar:**
-- Bölge bazlı: sefer sayısı, toplam tonaj, toplam km, toplam yakıt
-- Çekici bazlı: sefer sayısı, toplam tonaj, toplam km, yakıt, lt/100km
-- Şoför bazlı: sefer sayısı, toplam tonaj, toplam km
+---
 
-**Grafikler:**
-- Günlük tonaj trendi (bar chart, son 30 gün)
-- Bölge bazlı tonaj dağılımı (pie veya bar)
+## Geçiş Planı (aşama aşama)
 
-### /kullanicilar (sadece yonetici)
-- Kullanıcı listesi
-- Yeni kullanıcı oluştur
-- Rol değiştir
+### Aşama 1 — Backend kur, frontend Supabase'de kalsın
+1. `backend/` klasörü oluştur, Spring Boot projesi init et
+2. Aynı Postgres'e bağlan (Supabase connection string)
+3. Tüm entity ve repository'leri yaz
+4. GET endpoint'lerini yaz ve test et (Postman/curl)
+5. Auth endpoint'ini yaz, JWT üret
+
+### Aşama 2 — Frontend services katmanını taşı
+1. `frontend/src/lib/apiClient.js` oluştur (fetch wrapper, JWT header ekler)
+2. Her service dosyasını Supabase → apiClient'a çevir:
+   - `trips.js` → `/api/seferler`
+   - `soforler.js` → `/api/soforler`
+   - `cekiciler.js` → `/api/cekiciler`
+   - `dorseler.js` → `/api/dorseler`
+3. `AuthContext.jsx` → Supabase Auth yerine `/api/auth/login` kullan
+4. `supabaseClient.js` dosyasını kaldır
+
+### Aşama 3 — Supabase'i kapat
+1. Supabase RLS politikaları devre dışı
+2. Supabase Auth kullanımı sona erer
+3. Sadece Postgres bağlantısı kalır (ya Supabase Postgres ya da kendi sunucu)
+
+### Aşama 4 — Multi-tenant (ileriki sprint)
+- Tüm tablolara `firma_id` alanı ekle
+- `TenantContext` ile her request'e firma bilgisi enjekte et
+- Firma bazlı veri izolasyonu
+
+### Aşama 5 — Anomali tespiti (ileriki sprint)
+- FastAPI microservice (Python)
+- Olağandışı tonaj, km, yakıt tüketimi tespiti
+- Spring Boot bu servisi çağırır, sonuçları dashboard'da gösterir
+
+---
+
+## Monorepo Kurulum Komutları
+
+```bash
+# Mevcut frontend klasörüne taşı
+mkdir -p arac-takip/frontend
+mv * arac-takip/frontend/   # mevcut dosyaları taşı
+cd arac-takip
+
+# Spring Boot backend oluştur (Spring Initializr veya maven)
+mkdir backend
+cd backend
+# dependencies: Spring Web, Spring Security, Spring Data JPA, PostgreSQL Driver, Lombok, jjwt
+```
+
+### backend/application.yml
+```yaml
+spring:
+  datasource:
+    url: ${DATABASE_URL}           # Supabase Postgres connection string
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate           # Tabloları değiştirme, sadece doğrula
+    show-sql: false
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000             # 24 saat
+
+server:
+  port: 8080
+
+cors:
+  allowed-origins: http://localhost:5173
+```
+
+---
+
+## Dikkat Edilecekler
+
+- `km` ve `sfr_suresi` Postgres'te **generated column** — JPA entity'de `@Column(insertable=false, updatable=false)`
+- `ddl-auto: validate` kullan — Hibernate tablo oluşturmasın, mevcut Supabase tablolarını bozmayalım
+- Frontend geçiş sırasında `supabaseClient.js` ile `apiClient.js` bir süre birlikte yaşayabilir
+- CORS ayarı: frontend `localhost:5173`, backend `localhost:8080`
 
 ## Kod Standartları
-- Türkçe değişken/fonksiyon isimleri KULLANMA, İngilizce kullan
-- Component'lar `src/components/` altında
-- Sayfalar `src/pages/` altında
-- Supabase sorguları `src/services/` altında topla
-- Her component kendi klasöründe: `ComponentAdi/index.jsx`
-- Async işlemlerde loading ve error state'i mutlaka yönet
-- Mobil öncelikli tasarım, sefer giriş formu telefonda rahat kullanılmalı
-- Form validasyonu: tonaj, km, saat alanları zorunlu
 
-## Yapılmaması Gerekenler
-- Karmaşık state management kurma, basit tut
-- Gereksiz kütüphane ekleme
-- Service role key'i frontend'e koyma
-- RLS'yi kapatma
+**Frontend (değişmez):**
+- İngilizce değişken/fonksiyon isimleri
+- Servis katmanında Supabase sorguları (geçiş sonrası: apiClient)
+- Component başına klasör: `ComponentAdi/index.jsx`
+
+**Backend:**
+- Paket: `com.aractakip`
+- Lombok kullan (`@Data`, `@Builder`, `@RequiredArgsConstructor`)
+- DTO — Entity ayrımı yap (Controller DTO alır/döner, Service Entity çalışır)
+- Her endpoint için anlamlı HTTP status kodu dön
+- Exception handling: `@ControllerAdvice` ile merkezi
