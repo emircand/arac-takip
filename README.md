@@ -1,23 +1,19 @@
 # Araç Takip
 
-Çöp toplama filolarını takip etmek için geliştirilmiş web uygulaması. Saha ekibi mobil üzerinden sefer ve yakıt verisi girer; yöneticiler anlık dashboard üzerinden araç bazlı performansı izler.
-
-## Ekran Görüntüleri
-
-| Saha Girişi | Yönetici Dashboard |
-|---|---|
-| Sefer ve yakıt formu, mobil uyumlu | Özet kartlar + araç bazlı tablo |
+Çöp toplama filolarını takip etmek için geliştirilmiş web uygulaması. Saha ekibi mobil üzerinden sefer verisi girer; yöneticiler anlık dashboard üzerinden bölge, çekici ve şoför bazlı performansı izler.
 
 ## Özellikler
 
-- **Saha Ekranı** — Araç seçip sefer (tarih, tonaj, rota) veya yakıt (litre, tutar) girişi yapılır. Mobil öncelikli tasarım.
-- **Yönetici Dashboard** — Aktif araç sayısı, günlük sefer ve tonaj özetleri. Bugün / Bu Hafta / Bu Ay filtresiyle araç bazlı tablo.
-- **Supabase Backend** — Postgres tabanlı gerçek zamanlı veri, REST API ile erişim.
+- **Authentication** — Supabase Auth tabanlı, iki rol: `saha` ve `yonetici`
+- **Saha Ekranı** — Çekici + dorse + şoför kombinasyonuyla sefer girişi. Son 20 sefer listesi, düzenleme ve silme. Mobil öncelikli tasarım.
+- **Tanımlar** — Şoför, çekici ve dorse kayıtlarını yönet; aktif/pasif durumu değiştir.
+- **Dashboard** (yönetici) — Bugünün özet kartları + Bugün/Bu Hafta/Bu Ay dönem filtresiyle bölge, çekici ve şoför bazlı tablolar.
+- **Supabase Backend** — Postgres tabanlı veri, RLS ile güvenli REST API erişimi.
 
 ## Teknoloji
 
 - [React 19](https://react.dev) + [Vite 7](https://vite.dev)
-- [Supabase](https://supabase.com) (Postgres + REST API)
+- [Supabase](https://supabase.com) (Postgres + Auth + REST API)
 - [Tailwind CSS v4](https://tailwindcss.com)
 
 ## Kurulum
@@ -52,39 +48,63 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 ### 4. Supabase tablolarını oluşturun
 
-Supabase SQL Editor'da aşağıdaki sorguyu çalıştırın:
+Supabase SQL Editor'da aşağıdaki sorguları çalıştırın:
 
 ```sql
-create table araclar (
-  id uuid primary key default gen_random_uuid(),
-  plaka text not null,
-  sofor_adi text not null,
-  ilce text,
-  arac_tipi text,
-  aktif boolean default true,
-  created_at timestamptz default now()
+-- Kullanıcı profilleri (auth.users ile 1:1)
+create table profiller (
+  id uuid primary key references auth.users(id) on delete cascade,
+  ad_soyad text not null,
+  rol text not null check (rol in ('saha', 'yonetici'))
 );
 
+-- Şoförler
+create table soforler (
+  id uuid primary key default gen_random_uuid(),
+  ad_soyad text not null,
+  telefon text,
+  aktif boolean default true
+);
+
+-- Çekiciler
+create table cekiciler (
+  id uuid primary key default gen_random_uuid(),
+  plaka text not null unique,
+  arac_tipi text default 'Çekici',
+  aktif boolean default true
+);
+
+-- Dorseler
+create table dorseler (
+  id uuid primary key default gen_random_uuid(),
+  plaka text not null unique,
+  aktif boolean default true
+);
+
+-- Seferler
 create table seferler (
   id uuid primary key default gen_random_uuid(),
-  arac_id uuid references araclar(id),
+  girdi_yapan uuid references auth.users(id),
   tarih date not null,
-  tonaj numeric,
-  rota text,
-  notlar text,
-  created_at timestamptz default now()
-);
-
-create table yakitlar (
-  id uuid primary key default gen_random_uuid(),
-  arac_id uuid references araclar(id),
-  tarih date not null,
-  litre numeric,
-  tutar numeric,
-  notlar text,
-  created_at timestamptz default now()
+  bolge text,
+  cekici_id uuid references cekiciler(id),
+  dorse_id uuid references dorseler(id),
+  sofor_id uuid references soforler(id),
+  cikis_saati time,
+  donus_saati time,
+  sfr_suresi interval generated always as (donus_saati - cikis_saati) stored,
+  tonaj numeric(10,3),
+  cikis_km integer,
+  donus_km integer,
+  km integer generated always as (donus_km - cikis_km) stored,
+  sfr_srs integer,
+  sfr integer default 1,
+  yakit numeric(8,2),
+  notlar text
 );
 ```
+
+RLS politikalarını ve kullanıcı kayıt trigger'larını Supabase Dashboard üzerinden ayarlayın.
 
 ### 5. Geliştirme sunucusunu başlatın
 
@@ -94,29 +114,45 @@ npm run dev
 
 Uygulama `http://localhost:5173` adresinde açılır.
 
+## Sayfa Erişimi
+
+| Sayfa | saha | yonetici |
+|-------|:----:|:--------:|
+| `/login` | ✓ | ✓ |
+| `/saha` | ✓ | ✓ |
+| `/tanimlar` | ✓ | ✓ |
+| `/dashboard` | — | ✓ |
+
 ## Proje Yapısı
 
 ```
 src/
+├── contexts/
+│   └── AuthContext.jsx          # Session + profil (rol dahil)
 ├── lib/
-│   └── supabaseClient.js       # Supabase bağlantısı
+│   └── supabaseClient.js        # Supabase bağlantısı
 ├── services/
-│   ├── vehicles.js             # Araç sorguları
-│   ├── trips.js                # Sefer sorguları
-│   └── fuel.js                 # Yakıt sorguları
+│   ├── trips.js                 # Sefer sorguları
+│   ├── soforler.js              # Şoför sorguları
+│   ├── cekiciler.js             # Çekici sorguları
+│   └── dorseler.js              # Dorse sorguları
 ├── components/
-│   ├── NavBar/
-│   ├── TripForm/
-│   ├── FuelForm/
-│   ├── SummaryCards/
-│   └── VehicleTable/
+│   ├── NavBar/                  # Rol bazlı navigasyon
+│   ├── ProtectedRoute/          # Auth + rol yönlendirme
+│   ├── TripForm/                # Sefer giriş formu
+│   ├── RecentTripsList/         # Son 20 sefer listesi
+│   └── SummaryCards/            # Dashboard özet kartları
 └── pages/
-    ├── FieldPage/              # Saha ekibi ekranı
-    └── DashboardPage/          # Yönetici ekranı
+    ├── LoginPage/               # Giriş ekranı
+    ├── FieldPage/               # Saha ekranı (/saha)
+    ├── TanimlarPage/            # Şoför/çekici/dorse tanımları
+    └── DashboardPage/           # Yönetici dashboard
 ```
 
 ## Veri Modeli
 
-**araclar** — plaka, şoför adı, ilçe, araç tipi, aktif durumu
-**seferler** — araç, tarih, tonaj, rota, notlar
-**yakitlar** — araç, tarih, litre, tutar, notlar
+**profiller** — kullanıcı adı, rol (`saha` / `yonetici`)
+**soforler** — ad soyad, telefon, aktif
+**cekiciler** — plaka, araç tipi, aktif
+**dorseler** — plaka, aktif
+**seferler** — tarih, bölge, çekici, dorse, şoför, çıkış/dönüş saati, tonaj, km, yakıt, notlar
