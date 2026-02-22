@@ -12,7 +12,7 @@ function Card({ title, value, icon, bg, text }) {
   )
 }
 
-export default function SummaryCards({ tripCount, totalTonaj, totalKm, totalYakit }) {
+export default function SummaryCards({ tripCount, totalTonaj, totalKm, totalYakit, kmUyariCount = 0 }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       <Card
@@ -43,6 +43,15 @@ export default function SummaryCards({ tripCount, totalTonaj, totalKm, totalYaki
         bg="bg-violet-50"
         text="text-violet-700"
       />
+      <div className="col-span-2">
+        <Card
+          title="KM Uyarısı"
+          value={kmUyariCount > 0 ? `${kmUyariCount} uyarı` : 'Sorun yok'}
+          icon="⚠️"
+          bg={kmUyariCount > 0 ? 'bg-yellow-50' : 'bg-gray-50'}
+          text={kmUyariCount > 0 ? 'text-yellow-700' : 'text-gray-400'}
+        />
+      </div>
     </div>
   )
 }

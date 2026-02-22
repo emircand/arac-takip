@@ -3,11 +3,8 @@ import {
   fetchAllSoforler, createSofor, updateSofor, toggleSoforActive,
 } from '../../services/soforler'
 import {
-  fetchAllCekiciler, createCekici, updateCekici, toggleCekiciActive,
-} from '../../services/cekiciler'
-import {
-  fetchAllDorseler, createDorse, updateDorse, toggleDorseActive,
-} from '../../services/dorseler'
+  fetchAraclar, fetchAracTurleri, createArac, updateArac, toggleAracAktif,
+} from '../../services/araclar'
 
 const inputCls =
   'w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
@@ -24,16 +21,29 @@ function Badge({ aktif }) {
   )
 }
 
+function TurBadge({ ad }) {
+  const colors = {
+    cekici: 'bg-blue-100 text-blue-700',
+    dorse:  'bg-orange-100 text-orange-700',
+    pikap:  'bg-purple-100 text-purple-700',
+  }
+  return (
+    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full capitalize ${colors[ad] ?? 'bg-gray-100 text-gray-600'}`}>
+      {ad}
+    </span>
+  )
+}
+
 // ─── Şoförler ────────────────────────────────────────────────────────────────
 function SoforlerSection() {
-  const [items, setItems] = useState([])
+  const [items, setItems]     = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [addForm, setAddForm] = useState({ ad_soyad: '', telefon: '' })
-  const [editId, setEditId] = useState(null)
+  const [editId, setEditId]   = useState(null)
   const [editForm, setEditForm] = useState({})
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
+  const [saving, setSaving]   = useState(false)
+  const [error, setError]     = useState(null)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -79,7 +89,6 @@ function SoforlerSection() {
         <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{error}</div>
       )}
 
-      {/* Ekle butonu / form */}
       {!showAdd ? (
         <button
           onClick={() => setShowAdd(true)}
@@ -109,7 +118,6 @@ function SoforlerSection() {
         </form>
       )}
 
-      {/* Liste */}
       {loading ? (
         <div className="flex justify-center py-10">
           <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -155,9 +163,7 @@ function SoforlerSection() {
                     </button>
                     <button onClick={() => handleToggle(item.id, item.aktif)}
                       className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                        item.aktif
-                          ? 'text-gray-500 bg-gray-50 hover:bg-gray-100'
-                          : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
+                        item.aktif ? 'text-gray-500 bg-gray-50 hover:bg-gray-100' : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
                       }`}>
                       {item.aktif ? 'Pasif' : 'Aktif'}
                     </button>
@@ -172,34 +178,48 @@ function SoforlerSection() {
   )
 }
 
-// ─── Çekiciler ────────────────────────────────────────────────────────────────
-function CekicilerSection() {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showAdd, setShowAdd] = useState(false)
-  const [addForm, setAddForm] = useState({ plaka: '', arac_tipi: 'Çekici' })
-  const [editId, setEditId] = useState(null)
-  const [editForm, setEditForm] = useState({})
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
+// ─── Araçlar (cekici + dorse + pikap — tek sekme, tür filtreli) ───────────────
+function AraclarSection() {
+  const [items, setItems]         = useState([])
+  const [turler, setTurler]       = useState([])
+  const [filterTur, setFilterTur] = useState('hepsi')
+  const [loading, setLoading]     = useState(true)
+  const [showAdd, setShowAdd]     = useState(false)
+  const [addForm, setAddForm]     = useState({ plaka: '', tur_id: '' })
+  const [editId, setEditId]       = useState(null)
+  const [editForm, setEditForm]   = useState({})
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState(null)
 
   const load = useCallback(() => {
     setLoading(true)
-    fetchAllCekiciler()
+    fetchAraclar()
       .then(setItems)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    fetchAracTurleri().then((data) => {
+      setTurler(data)
+      if (data.length > 0 && !addForm.tur_id) {
+        setAddForm((p) => ({ ...p, tur_id: data[0].id }))
+      }
+    }).catch((e) => setError(e.message))
+    load()
+  }, [load])
+
+  const visible = filterTur === 'hepsi'
+    ? items
+    : items.filter((a) => a.tur?.ad === filterTur)
 
   async function handleAdd(e) {
     e.preventDefault()
-    if (!addForm.plaka.trim()) return
+    if (!addForm.plaka.trim() || !addForm.tur_id) return
     setSaving(true)
     try {
-      await createCekici({ plaka: addForm.plaka.trim().toUpperCase(), arac_tipi: addForm.arac_tipi.trim() || 'Çekici', aktif: true })
-      setAddForm({ plaka: '', arac_tipi: 'Çekici' })
+      await createArac({ plaka: addForm.plaka.trim().toUpperCase(), tur_id: addForm.tur_id, aktif: true })
+      setAddForm((p) => ({ ...p, plaka: '' }))
       setShowAdd(false)
       load()
     } catch (err) { setError(err.message) }
@@ -209,7 +229,7 @@ function CekicilerSection() {
   async function handleUpdate(id) {
     setSaving(true)
     try {
-      await updateCekici(id, { plaka: editForm.plaka.trim().toUpperCase(), arac_tipi: editForm.arac_tipi.trim() })
+      await updateArac(id, { plaka: editForm.plaka.trim().toUpperCase(), tur_id: editForm.tur_id })
       setEditId(null)
       load()
     } catch (err) { setError(err.message) }
@@ -217,7 +237,7 @@ function CekicilerSection() {
   }
 
   async function handleToggle(id, aktif) {
-    try { await toggleCekiciActive(id, !aktif); load() }
+    try { await toggleAracAktif(id, !aktif); load() }
     catch (err) { setError(err.message) }
   }
 
@@ -227,21 +247,47 @@ function CekicilerSection() {
         <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{error}</div>
       )}
 
+      {/* Tür filtresi */}
+      <div className="flex gap-1.5 flex-wrap">
+        {[{ id: 'hepsi', label: 'Tümü' }, ...turler.map((t) => ({ id: t.ad, label: t.ad.charAt(0).toUpperCase() + t.ad.slice(1) }))].map((opt) => (
+          <button
+            key={opt.id}
+            onClick={() => setFilterTur(opt.id)}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+              filterTur === opt.id
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
       {!showAdd ? (
         <button onClick={() => setShowAdd(true)}
           className="w-full py-2.5 border-2 border-dashed border-gray-200 rounded-xl text-sm font-semibold text-gray-400 hover:border-blue-300 hover:text-blue-500 transition-colors">
-          + Yeni Çekici Ekle
+          + Yeni Araç Ekle
         </button>
       ) : (
         <form onSubmit={handleAdd} className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-3">
-          <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">Yeni Çekici</p>
+          <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">Yeni Araç</p>
           <div className="grid grid-cols-2 gap-2">
-            <input value={addForm.plaka}
+            <input
+              value={addForm.plaka}
               onChange={(e) => setAddForm((p) => ({ ...p, plaka: e.target.value.toUpperCase() }))}
-              placeholder="Plaka *" className={inputCls} required autoFocus />
-            <input value={addForm.arac_tipi}
-              onChange={(e) => setAddForm((p) => ({ ...p, arac_tipi: e.target.value }))}
-              placeholder="Araç Tipi" className={inputCls} />
+              placeholder="Plaka *" className={inputCls} required autoFocus
+            />
+            <select
+              value={addForm.tur_id}
+              onChange={(e) => setAddForm((p) => ({ ...p, tur_id: e.target.value }))}
+              className={inputCls} required
+            >
+              <option value="">— Tür seçin —</option>
+              {turler.map((t) => (
+                <option key={t.id} value={t.id}>{t.ad.charAt(0).toUpperCase() + t.ad.slice(1)}</option>
+              ))}
+            </select>
           </div>
           <div className="flex gap-2">
             <button type="submit" disabled={saving}
@@ -260,11 +306,11 @@ function CekicilerSection() {
         <div className="flex justify-center py-10">
           <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : items.length === 0 ? (
-        <div className="text-center py-10 text-gray-300 text-sm">Henüz çekici eklenmedi.</div>
+      ) : visible.length === 0 ? (
+        <div className="text-center py-10 text-gray-300 text-sm">Bu türde araç bulunamadı.</div>
       ) : (
         <div className="space-y-2">
-          {items.map((item) => (
+          {visible.map((item) => (
             <div key={item.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               {editId === item.id ? (
                 <div className="p-4 space-y-3 bg-gray-50">
@@ -272,9 +318,15 @@ function CekicilerSection() {
                     <input value={editForm.plaka}
                       onChange={(e) => setEditForm((p) => ({ ...p, plaka: e.target.value.toUpperCase() }))}
                       className={inputCls} autoFocus />
-                    <input value={editForm.arac_tipi}
-                      onChange={(e) => setEditForm((p) => ({ ...p, arac_tipi: e.target.value }))}
-                      placeholder="Araç Tipi" className={inputCls} />
+                    <select
+                      value={editForm.tur_id}
+                      onChange={(e) => setEditForm((p) => ({ ...p, tur_id: e.target.value }))}
+                      className={inputCls}
+                    >
+                      {turler.map((t) => (
+                        <option key={t.id} value={t.id}>{t.ad.charAt(0).toUpperCase() + t.ad.slice(1)}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => handleUpdate(item.id)} disabled={saving}
@@ -291,140 +343,11 @@ function CekicilerSection() {
                 <div className="flex items-center px-4 py-3 gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="font-mono font-bold text-blue-700 text-sm">{item.plaka}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{item.arac_tipi}</p>
                   </div>
+                  <TurBadge ad={item.tur?.ad} />
                   <Badge aktif={item.aktif} />
                   <div className="flex gap-1">
-                    <button onClick={() => { setEditId(item.id); setEditForm({ plaka: item.plaka, arac_tipi: item.arac_tipi }) }}
-                      className="px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-                      Düzenle
-                    </button>
-                    <button onClick={() => handleToggle(item.id, item.aktif)}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                        item.aktif ? 'text-gray-500 bg-gray-50 hover:bg-gray-100' : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
-                      }`}>
-                      {item.aktif ? 'Pasif' : 'Aktif'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  )
-}
-
-// ─── Dorseler ────────────────────────────────────────────────────────────────
-function DorselerSection() {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showAdd, setShowAdd] = useState(false)
-  const [addPlaka, setAddPlaka] = useState('')
-  const [editId, setEditId] = useState(null)
-  const [editPlaka, setEditPlaka] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
-
-  const load = useCallback(() => {
-    setLoading(true)
-    fetchAllDorseler()
-      .then(setItems)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => { load() }, [load])
-
-  async function handleAdd(e) {
-    e.preventDefault()
-    if (!addPlaka.trim()) return
-    setSaving(true)
-    try {
-      await createDorse({ plaka: addPlaka.trim().toUpperCase(), aktif: true })
-      setAddPlaka('')
-      setShowAdd(false)
-      load()
-    } catch (err) { setError(err.message) }
-    finally { setSaving(false) }
-  }
-
-  async function handleUpdate(id) {
-    setSaving(true)
-    try {
-      await updateDorse(id, { plaka: editPlaka.trim().toUpperCase() })
-      setEditId(null)
-      load()
-    } catch (err) { setError(err.message) }
-    finally { setSaving(false) }
-  }
-
-  async function handleToggle(id, aktif) {
-    try { await toggleDorseActive(id, !aktif); load() }
-    catch (err) { setError(err.message) }
-  }
-
-  return (
-    <section className="space-y-3">
-      {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{error}</div>
-      )}
-
-      {!showAdd ? (
-        <button onClick={() => setShowAdd(true)}
-          className="w-full py-2.5 border-2 border-dashed border-gray-200 rounded-xl text-sm font-semibold text-gray-400 hover:border-blue-300 hover:text-blue-500 transition-colors">
-          + Yeni Dorse Ekle
-        </button>
-      ) : (
-        <form onSubmit={handleAdd} className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-3">
-          <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">Yeni Dorse</p>
-          <input value={addPlaka} onChange={(e) => setAddPlaka(e.target.value.toUpperCase())}
-            placeholder="Plaka *" className={inputCls} required autoFocus />
-          <div className="flex gap-2">
-            <button type="submit" disabled={saving}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-semibold rounded-xl transition-colors">
-              {saving ? 'Ekleniyor...' : 'Ekle'}
-            </button>
-            <button type="button" onClick={() => setShowAdd(false)}
-              className="px-4 py-2 text-sm text-gray-500 border border-gray-200 rounded-xl hover:bg-white transition-colors">
-              İptal
-            </button>
-          </div>
-        </form>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center py-10">
-          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : items.length === 0 ? (
-        <div className="text-center py-10 text-gray-300 text-sm">Henüz dorse eklenmedi.</div>
-      ) : (
-        <div className="space-y-2">
-          {items.map((item) => (
-            <div key={item.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              {editId === item.id ? (
-                <div className="p-4 space-y-3 bg-gray-50">
-                  <input value={editPlaka} onChange={(e) => setEditPlaka(e.target.value.toUpperCase())}
-                    className={inputCls} autoFocus />
-                  <div className="flex gap-2">
-                    <button onClick={() => handleUpdate(item.id)} disabled={saving}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-semibold rounded-xl transition-colors">
-                      {saving ? '...' : 'Kaydet'}
-                    </button>
-                    <button onClick={() => setEditId(null)}
-                      className="px-4 py-2 text-sm text-gray-500 border border-gray-200 rounded-xl hover:bg-white transition-colors">
-                      İptal
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center px-4 py-3 gap-3">
-                  <p className="font-mono font-bold text-blue-700 text-sm flex-1">{item.plaka}</p>
-                  <Badge aktif={item.aktif} />
-                  <div className="flex gap-1">
-                    <button onClick={() => { setEditId(item.id); setEditPlaka(item.plaka) }}
+                    <button onClick={() => { setEditId(item.id); setEditForm({ plaka: item.plaka, tur_id: item.tur?.id }) }}
                       className="px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
                       Düzenle
                     </button>
@@ -448,8 +371,7 @@ function DorselerSection() {
 // ─── TanimlarPage ─────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'soforler', label: 'Şoförler', icon: '👤' },
-  { id: 'cekiciler', label: 'Çekiciler', icon: '🚛' },
-  { id: 'dorseler', label: 'Dorseler', icon: '🚌' },
+  { id: 'araclar',  label: 'Araçlar',  icon: '🚛' },
 ]
 
 export default function TanimlarPage() {
@@ -459,7 +381,7 @@ export default function TanimlarPage() {
     <div className="max-w-lg mx-auto px-4 py-5">
       <div className="mb-5">
         <h1 className="text-xl font-bold text-gray-900">Tanımlar</h1>
-        <p className="text-xs text-gray-400 mt-0.5">Şoför, çekici ve dorse kayıtlarını yönetin</p>
+        <p className="text-xs text-gray-400 mt-0.5">Şoför ve araç kayıtlarını yönetin</p>
       </div>
 
       {/* Sekmeler */}
@@ -473,15 +395,13 @@ export default function TanimlarPage() {
             }`}
           >
             <span>{t.icon}</span>
-            <span className="hidden sm:inline">{t.label}</span>
-            <span className="sm:hidden">{t.label.split('ler')[0]}</span>
+            <span>{t.label}</span>
           </button>
         ))}
       </div>
 
       {tab === 'soforler' && <SoforlerSection />}
-      {tab === 'cekiciler' && <CekicilerSection />}
-      {tab === 'dorseler' && <DorselerSection />}
+      {tab === 'araclar'  && <AraclarSection />}
     </div>
   )
 }

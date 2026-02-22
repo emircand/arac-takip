@@ -12,6 +12,9 @@ public record SeferDto(
         UUID id,
         LocalDate tarih,
         String bolge,
+        UUID cekiciId,
+        UUID dorseId,
+        UUID soforId,
         String cekiciPlaka,
         String dorsePlaka,
         String soforAdSoyad,
@@ -26,7 +29,9 @@ public record SeferDto(
         Integer sfr,
         BigDecimal yakit,
         String notlar,
-        UUID girdiYapan
+        UUID girdiYapan,
+        Boolean kmUyari,
+        String kmUyariAciklama
 ) {
     public static SeferDto from(Sefer s) {
         String sfrSuresi = null;
@@ -36,10 +41,17 @@ public record SeferDto(
             long minutes = d.toMinutesPart();
             sfrSuresi = String.format("%dsa %02ddk", hours, minutes);
         }
+        Integer km = s.getKm();
+        if (km == null && s.getCikisKm() != null && s.getDonusKm() != null) {
+            km = s.getDonusKm() - s.getCikisKm();
+        }
         return new SeferDto(
                 s.getId(),
                 s.getTarih(),
                 s.getBolge(),
+                s.getCekici() != null ? s.getCekici().getId() : null,
+                s.getDorse() != null ? s.getDorse().getId() : null,
+                s.getSofor() != null ? s.getSofor().getId() : null,
                 s.getCekici() != null ? s.getCekici().getPlaka() : null,
                 s.getDorse() != null ? s.getDorse().getPlaka() : null,
                 s.getSofor() != null ? s.getSofor().getAdSoyad() : null,
@@ -49,12 +61,14 @@ public record SeferDto(
                 s.getTonaj(),
                 s.getCikisKm(),
                 s.getDonusKm(),
-                s.getKm(),
+                km,
                 s.getSfrSrs(),
                 s.getSfr(),
                 s.getYakit(),
                 s.getNotlar(),
-                s.getGirdiYapan()
+                s.getGirdiYapan(),
+                s.getKmUyari(),
+                s.getKmUyariAciklama()
         );
     }
 }

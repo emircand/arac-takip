@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabaseClient'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
@@ -13,16 +14,14 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
-
-    if (authError) {
+    try {
+      await login(email, password)
+      navigate('/saha', { replace: true })
+    } catch (err) {
       setError('E-posta veya şifre hatalı.')
-      return
+    } finally {
+      setLoading(false)
     }
-
-    navigate('/saha', { replace: true })
   }
 
   return (

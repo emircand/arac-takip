@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { createTrip, updateTrip } from '../../services/trips'
+import { createTrip, updateTrip, fetchLastKm } from '../../services/trips'
+import SearchableSelect from '../SearchableSelect'
 
 const today = () => new Date().toISOString().split('T')[0]
 
@@ -46,6 +47,7 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
+  const [lastKm, setLastKm] = useState(null)
 
   const isEditing = !!editingTrip
 
@@ -72,6 +74,20 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
       setForm(EMPTY_FORM)
     }
   }, [editingTrip])
+
+  useEffect(() => {
+    if (isEditing || !form.cekici_id) {
+      setLastKm(null)
+      return
+    }
+    fetchLastKm(form.cekici_id)
+      .then((data) => {
+        const km = data?.donus_km ?? null
+        setLastKm(km)
+        setForm((prev) => ({ ...prev, cikis_km: km != null ? String(km) : '' }))
+      })
+      .catch(() => setLastKm(null))
+  }, [form.cekici_id, isEditing])
 
   function handleChange(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -118,13 +134,23 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
       } else {
         await createTrip(payload)
         setSuccess(true)
+        // Form sıfırla, cekici_id koru — useEffect cikis_km'i otomatik güncelleyecek
+        const savedCekiciId = form.cekici_id
         setForm((prev) => ({
           ...EMPTY_FORM,
           tarih: prev.tarih,
-          cekici_id: prev.cekici_id,
+          cekici_id: savedCekiciId,
           dorse_id: prev.dorse_id,
           sofor_id: prev.sofor_id,
         }))
+        // useEffect cekici_id değişmediğinde tetiklenmez → manuel refetch
+        fetchLastKm(savedCekiciId)
+          .then((data) => {
+            const km = data?.donus_km ?? null
+            setLastKm(km)
+            setForm((prev) => ({ ...prev, cikis_km: km != null ? String(km) : '' }))
+          })
+          .catch(() => {})
         onTripSaved?.()
       }
     } catch (err) {
@@ -162,30 +188,36 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
       <Section label="Araç" />
       <div>
         <Label text="Çekici" required />
-        <select name="cekici_id" value={form.cekici_id} onChange={handleChange} className={inputCls} required>
-          <option value="">— Çekici seçin —</option>
-          {cekiciler.map((c) => (
-            <option key={c.id} value={c.id}>{c.plaka}</option>
-          ))}
-        </select>
+        <SearchableSelect
+          name="cekici_id"
+          value={form.cekici_id}
+          onChange={handleChange}
+          options={cekiciler.map((c) => ({ id: c.id, label: c.plaka }))}
+          placeholder="— Çekici seçin —"
+          required
+        />
       </div>
       <div>
         <Label text="Dorse" required />
-        <select name="dorse_id" value={form.dorse_id} onChange={handleChange} className={inputCls} required>
-          <option value="">— Dorse seçin —</option>
-          {dorseler.map((d) => (
-            <option key={d.id} value={d.id}>{d.plaka}</option>
-          ))}
-        </select>
+        <SearchableSelect
+          name="dorse_id"
+          value={form.dorse_id}
+          onChange={handleChange}
+          options={dorseler.map((d) => ({ id: d.id, label: d.plaka }))}
+          placeholder="— Dorse seçin —"
+          required
+        />
       </div>
       <div>
         <Label text="Şoför" required />
-        <select name="sofor_id" value={form.sofor_id} onChange={handleChange} className={inputCls} required>
-          <option value="">— Şoför seçin —</option>
-          {soforler.map((s) => (
-            <option key={s.id} value={s.id}>{s.ad_soyad}</option>
-          ))}
-        </select>
+        <SearchableSelect
+          name="sofor_id"
+          value={form.sofor_id}
+          onChange={handleChange}
+          options={soforler.map((s) => ({ id: s.id, label: s.ad_soyad }))}
+          placeholder="— Şoför seçin —"
+          required
+        />
       </div>
 
       {/* ── SAAT ─────────────────────────────────────── */}
@@ -210,7 +242,20 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label text="Çıkış KM" required />
-          <input type="number" name="cikis_km" value={form.cikis_km} onChange={handleChange} placeholder="0" min="0" className={inputCls} required />
+          <input
+            type="number"
+            name="cikis_km"
+            value={form.cikis_km}
+            onChange={handleChange}
+            placeholder="0"
+            min="0"
+            disabled={!isEditing}
+            className={`${inputCls} ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
+            required
+          />
+          {!isEditing && lastKm != null && (
+            <p className="text-[11px] text-blue-500 mt-1 pl-1">Son sefer dönüş km'sinden otomatik dolduruldu</p>
+          )}
         </div>
         <div>
           <Label text="Dönüş KM" required />

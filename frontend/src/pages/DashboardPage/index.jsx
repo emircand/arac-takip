@@ -39,7 +39,7 @@ function aggregateByCekici(trips) {
   const map = {}
   trips.forEach((t) => {
     const key = t.cekici_id
-    if (!map[key]) map[key] = { cekici_id: key, plaka: t.cekiciler?.plaka ?? '—', count: 0, tonaj: 0, km: 0, yakit: 0 }
+    if (!map[key]) map[key] = { cekici_id: key, plaka: t.cekici_plaka ?? '—', count: 0, tonaj: 0, km: 0, yakit: 0 }
     map[key].count += 1
     map[key].tonaj += Number(t.tonaj) || 0
     map[key].km += Number(t.km) || 0
@@ -52,7 +52,7 @@ function aggregateBySofor(trips) {
   const map = {}
   trips.forEach((t) => {
     const key = t.sofor_id
-    if (!map[key]) map[key] = { sofor_id: key, ad_soyad: t.soforler?.ad_soyad ?? '—', count: 0, tonaj: 0, km: 0 }
+    if (!map[key]) map[key] = { sofor_id: key, ad_soyad: t.sofor_ad_soyad ?? '—', count: 0, tonaj: 0, km: 0 }
     map[key].count += 1
     map[key].tonaj += Number(t.tonaj) || 0
     map[key].km += Number(t.km) || 0
@@ -108,6 +108,7 @@ export default function DashboardPage() {
   const todayTonaj = todayStats.reduce((s, t) => s + (Number(t.tonaj) || 0), 0)
   const todayKm = todayStats.reduce((s, t) => s + (Number(t.km) || 0), 0)
   const todayYakit = todayStats.reduce((s, t) => s + (Number(t.yakit) || 0), 0)
+  const todayKmUyari = todayStats.filter((t) => t.km_uyari).length
 
   const bolgeRows = aggregateByBolge(trips)
   const cekiciRows = aggregateByCekici(trips)
@@ -142,6 +143,7 @@ export default function DashboardPage() {
         totalTonaj={todayTonaj}
         totalKm={todayKm}
         totalYakit={todayYakit}
+        kmUyariCount={todayKmUyari}
       />
 
       {/* Dönem filtresi + tablolar */}

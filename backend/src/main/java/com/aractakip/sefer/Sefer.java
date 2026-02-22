@@ -1,11 +1,11 @@
 package com.aractakip.sefer;
 
-import com.aractakip.cekici.Cekici;
-import com.aractakip.dorse.Dorse;
+import com.aractakip.arac.Arac;
 import com.aractakip.sofor.Sofor;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,6 +15,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "seferler")
 @Getter
+@Setter
 @NoArgsConstructor
 public class Sefer {
 
@@ -30,11 +31,11 @@ public class Sefer {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cekici_id")
-    private Cekici cekici;
+    private Arac cekici;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "dorse_id")
-    private Dorse dorse;
+    private Arac dorse;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "sofor_id")
@@ -68,4 +69,10 @@ public class Sefer {
     private BigDecimal yakit;
 
     private String notlar;
+
+    @Column(name = "km_uyari", nullable = false)
+    private Boolean kmUyari = false;
+
+    @Column(name = "km_uyari_aciklama")
+    private String kmUyariAciklama;
 }

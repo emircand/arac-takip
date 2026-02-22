@@ -33,3 +33,6 @@ backend/target/
 *.njsproj
 *.sln
 *.sw?
+
+docs/
+infra/

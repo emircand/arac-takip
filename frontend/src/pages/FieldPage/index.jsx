@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { fetchActiveCekiciler } from '../../services/cekiciler'
-import { fetchActiveDorseler } from '../../services/dorseler'
+import { fetchCekiciler, fetchDorseler } from '../../services/araclar'
 import { fetchActiveSoforler } from '../../services/soforler'
 import { fetchRecentTrips, deleteTrip } from '../../services/trips'
 import TripForm from '../../components/TripForm'
@@ -8,18 +7,18 @@ import RecentTripsList from '../../components/RecentTripsList'
 
 export default function FieldPage() {
   const [cekiciler, setCekiciler] = useState([])
-  const [dorseler, setDorseler] = useState([])
-  const [soforler, setSoforler] = useState([])
-  const [trips, setTrips] = useState([])
-  const [loadingData, setLoadingData] = useState(true)
+  const [dorseler, setDorseler]   = useState([])
+  const [soforler, setSoforler]   = useState([])
+  const [trips, setTrips]         = useState([])
+  const [loadingData, setLoadingData]   = useState(true)
   const [loadingTrips, setLoadingTrips] = useState(true)
-  const [error, setError] = useState(null)
-  const [editingTrip, setEditingTrip] = useState(null)
-  const [deletingId, setDeletingId] = useState(null)
+  const [error, setError]         = useState(null)
+  const [editingTrip, setEditingTrip]   = useState(null)
+  const [deletingId, setDeletingId]     = useState(null)
   const formRef = useRef(null)
 
   useEffect(() => {
-    Promise.all([fetchActiveCekiciler(), fetchActiveDorseler(), fetchActiveSoforler()])
+    Promise.all([fetchCekiciler(true), fetchDorseler(true), fetchActiveSoforler()])
       .then(([c, d, s]) => { setCekiciler(c); setDorseler(d); setSoforler(s) })
       .catch((err) => setError(err.message))
       .finally(() => setLoadingData(false))
@@ -27,7 +26,7 @@ export default function FieldPage() {
 
   const refreshTrips = useCallback(() => {
     setLoadingTrips(true)
-    fetchRecentTrips(20)
+    fetchRecentTrips()
       .then(setTrips)
       .catch((err) => setError(err.message))
       .finally(() => setLoadingTrips(false))
@@ -61,7 +60,6 @@ export default function FieldPage() {
   return (
     <div className="max-w-lg mx-auto px-4 py-5 space-y-5">
 
-      {/* Başlık */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Sefer Girişi</h1>
@@ -75,11 +73,7 @@ export default function FieldPage() {
         </div>
       )}
 
-      {/* Form kartı */}
-      <div
-        ref={formRef}
-        className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5"
-      >
+      <div ref={formRef} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
         {loadingData ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -97,7 +91,6 @@ export default function FieldPage() {
         )}
       </div>
 
-      {/* Son seferler başlığı */}
       <div className="flex items-center justify-between pt-1">
         <div>
           <h2 className="text-sm font-bold text-gray-700">Son Seferler</h2>

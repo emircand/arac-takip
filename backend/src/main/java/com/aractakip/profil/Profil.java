@@ -15,9 +15,17 @@ public class Profil {
     @Id
     private UUID id;
 
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(name = "sifre_hash", nullable = false)
+    private String sifreHash;
+
     @Column(name = "ad_soyad", nullable = false)
     private String adSoyad;
 
     @Column(nullable = false)
     private String rol;
+
+    private Boolean aktif;
 }

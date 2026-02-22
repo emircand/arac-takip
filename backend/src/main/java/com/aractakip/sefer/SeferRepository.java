@@ -62,7 +62,7 @@ public interface SeferRepository extends JpaRepository<Sefer, UUID> {
                    COALESCE(SUM(s.km), 0)    AS total_km,
                    COALESCE(SUM(s.yakit), 0) AS total_yakit
             FROM seferler s
-            JOIN cekiciler c ON s.cekici_id = c.id
+            JOIN araclar c ON s.cekici_id = c.id
             WHERE (:start IS NULL OR s.tarih >= CAST(:start AS date))
               AND (:end   IS NULL OR s.tarih <= CAST(:end AS date))
             GROUP BY c.plaka
@@ -84,6 +84,10 @@ public interface SeferRepository extends JpaRepository<Sefer, UUID> {
             ORDER BY total_tonaj DESC
             """, nativeQuery = true)
     List<SoforProj> aggregateBySofor(@Param("start") String start, @Param("end") String end);
+
+    // KM zincir kontrolü — aynı çekicinin son seferi
+    @Query(value = "SELECT * FROM seferler WHERE cekici_id = :cekiciId ORDER BY tarih DESC, sfr_srs DESC NULLS LAST, created_at DESC LIMIT 1", nativeQuery = true)
+    List<Sefer> findLastByCekiciId(@Param("cekiciId") UUID cekiciId);
 
     // Projection interfaces — native query result mapping
     interface OzetProj {

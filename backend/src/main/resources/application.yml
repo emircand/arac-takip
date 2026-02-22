@@ -1,4 +1,9 @@
 spring:
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: NON_NULL
   datasource:
     url: ${DATABASE_JDBC_URL}
     username: ${DATABASE_POOLER_USER}
@@ -17,10 +22,6 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
   expiration-ms: 86400000  # 24 saat
-
-supabase:
-  url: https://wzcxopnfjguisxuclwjs.supabase.co
-  anon-key: ${SUPABASE_ANON_KEY}
 
 server:
   port: 8080

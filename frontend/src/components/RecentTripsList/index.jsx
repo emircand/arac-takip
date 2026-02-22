@@ -28,27 +28,28 @@ export default function RecentTripsList({ trips, loading, onEdit, onDelete, dele
       {trips.map((trip) => (
         <div
           key={trip.id}
-          className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+          className={`rounded-2xl border shadow-sm overflow-hidden ${
+            trip.km_uyari
+              ? 'bg-yellow-50 border-yellow-200'
+              : 'bg-white border-gray-100'
+          }`}
         >
-          {/* Üst renk çubuğu */}
-          <div className="h-0.5 bg-gradient-to-r from-blue-500 to-blue-400" />
+          <div className={`h-0.5 bg-gradient-to-r ${trip.km_uyari ? 'from-yellow-400 to-orange-400' : 'from-blue-500 to-blue-400'}`} />
 
           <div className="px-4 pt-3 pb-3">
-            {/* Ana satır */}
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span className="font-mono font-bold text-blue-700 text-xs bg-blue-50 px-2 py-1 rounded-lg shrink-0">
-                  {trip.cekiciler?.plaka ?? '—'}
+                  {trip.cekici_plaka ?? '—'}
                 </span>
                 <span className="text-sm font-semibold text-gray-800 truncate">{trip.bolge}</span>
               </div>
               <span className="text-xs text-gray-300 shrink-0 pt-0.5">{trip.tarih}</span>
             </div>
 
-            {/* Alt satır: şoför + istatistikler + aksiyonlar */}
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <span className="text-xs text-gray-500 shrink-0">
-                {trip.soforler?.ad_soyad ?? '—'}
+                {trip.sofor_ad_soyad ?? '—'}
               </span>
               <span className="text-gray-200">•</span>
               {trip.tonaj != null && (
@@ -58,6 +59,12 @@ export default function RecentTripsList({ trips, loading, onEdit, onDelete, dele
               {trip.yakit != null && <StatChip value={`${Number(trip.yakit).toFixed(0)} L`} />}
               {trip.sfr_srs != null && (
                 <span className="text-[10px] text-gray-300">#{trip.sfr_srs}</span>
+              )}
+
+              {trip.km_uyari && (
+                <span title={trip.km_uyari_aciklama} className="text-[10px] font-semibold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-md cursor-help">
+                  ⚠ KM
+                </span>
               )}
 
               <div className="flex items-center gap-1 ml-auto shrink-0">
