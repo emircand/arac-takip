@@ -37,7 +37,7 @@ public class SeferService {
         };
         Sort sort = Sort.by(
                 Sort.Order.desc("tarih"),
-                Sort.Order.desc("sfrSrs").nullsLast()
+                Sort.Order.desc("sfrSrs")
         );
         return seferRepository.findAll(spec, sort).stream().map(SeferDto::from).toList();
     }
@@ -107,6 +107,7 @@ public class SeferService {
         sefer.setSfrSrs(req.sfrSrs());
         sefer.setSfr(req.sfr() != null ? req.sfr() : 1);
         sefer.setYakit(req.yakit());
+        sefer.setAlinanYakit(req.alinanYakit());
         sefer.setNotlar(req.notlar());
     }
 }

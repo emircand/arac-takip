@@ -15,7 +15,8 @@ async function request(method, path, body) {
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
 
-  const json = await res.json()
+  const text = await res.text()
+  const json = text ? JSON.parse(text) : {}
 
   if (!res.ok || !json.success) {
     throw new Error(json.message ?? `HTTP ${res.status}`)

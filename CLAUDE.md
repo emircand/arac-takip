@@ -1,55 +1,69 @@
 # arac-takip
 
-Fleet management app for waste collection companies.
-Monorepo: frontend/ (React 19+Vite+Tailwind) + backend/ (Spring Boot 3.4+JWT) + PostgreSQL 16.
+Atık toplama şirketi için araç filo yönetim sistemi. Sefer, yakıt, arıza, belge ve stok takibi.
 
-## EVERY SESSION — DO THIS FIRST
-1. Read `docs/MODULES.md` — find current module, check status
-2. If module has plan → read `plans/module{N}_plan.md`
-3. Work only on the active module
-4. Update status in MODULES.md when done
+## Stack
 
-## READ RULE
-Read only the section relevant to your task. Skip the rest.
+- **Frontend:** React 19 + Vite 7 + Tailwind 4 + MUI 7 → `frontend/` (port 5173)
+- **Backend:** Spring Boot 3.4.3 + Java 21 + Spring Security/JWT → `backend/` (port 8080)
+- **DB:** PostgreSQL 17 (port 5432), Hibernate `validate` mode — tüm şema SQL ile yönetilir
 
-## ROLES
-- `saha`: create trips + manage definitions
-- `yonetici`: saha + dashboard + user management
+## Project Structure
 
-## PROJECT LAYOUT
 ```
-arac-takip/
-├── frontend/src/
-│   ├── contexts/AuthContext.jsx
-│   ├── lib/apiClient.js           # ALL api calls go here
-│   ├── services/                  # one file per domain
-│   ├── components/
-│   └── pages/
-├── backend/src/main/java/com/aractakip/
-│   ├── config/
-│   ├── common/
-│   └── {domain}/
-├── infra/
-│   ├── docker-compose.yml
-│   ├── docker-compose.dev.yml
-│   └── nginx/nginx.conf
-├── plans/                         # module implementation plans
-├── docs/
-│   ├── SCHEMA.md
-│   ├── API.md
-│   ├── RULES.md
-│   ├── STANDARDS.md
-│   └── MODULES.md
-└── CLAUDE.md
+frontend/src/
+├── pages/          # Route-level components
+├── components/     # Reusable UI
+├── services/       # API call functions → apiClient.js
+└── context/        # Auth context
+
+backend/src/main/java/com/aractakip/
+├── {domain}/
+│   ├── {Entity}.java
+│   ├── {Entity}Repository.java
+│   ├── {Entity}Service.java
+│   ├── {Entity}Controller.java
+│   └── dto/
+├── config/         # Security, CORS, Jackson
+└── common/         # ApiResponse<T>, exceptions
 ```
 
-## DOCS
-- Schema:    `docs/SCHEMA.md`
-- API:       `docs/API.md`
-- Rules:     `docs/RULES.md`
-- Standards: `docs/STANDARDS.md`
-- Modules:   `docs/MODULES.md`
-- Plans:     `plans/module{N}_plan.md`
+## Key Commands
 
-## CURRENT: Module 5 — Document Tracking
-Plan: `plans/module5_plan.md`
+```bash
+# Backend
+cd backend && ./mvnw spring-boot:run
+./mvnw test
+
+# Frontend
+cd frontend && npm run dev
+npm run build
+
+# Database
+psql -U aractakip -d aractakip -f sql/migration.sql
+```
+
+## Critical Conventions
+
+- DB schema changes: **always SQL** — never Hibernate auto-DDL
+- All API responses wrapped in `ApiResponse<T>` (`success`, `data`/`message`)
+- Jackson SNAKE_CASE: Java camelCase → JSON snake_case automatic
+- JWT token stored in `localStorage` as `filo_token`
+- Frontend services use `apiClient.js` — single fetch entry point
+- GENERATED columns (`km`, `sfr_suresi`) — never set from app code
+- Views depend on `tonaj` column — drop/recreate on schema changes
+
+## Context Docs (read when relevant)
+
+- `@docs/summary.md` — Full system overview, DB model, business rules
+- `@docs/faz0-plan.md` — FAZ 0 implementation plan (Phase 1–4)
+- `@docs/mvp-plan.md` — Full MVP roadmap (6 phases)
+- `@docs/db-schema.md` — Table definitions and relationships
+- `@docs/api-reference.md` — Endpoint inventory
+- `@docs/is-kurallari.md` — Business rules (KM chain, belge durum, yakıt anomali)
+
+## Verification
+
+After any backend change: `./mvnw test`
+After any frontend change: `npm run build`
+After any SQL change: restart backend — Hibernate validate will catch mismatches

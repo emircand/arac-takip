@@ -13,11 +13,12 @@ public record SeferRequest(
         UUID soforId,
         LocalTime cikisSaati,
         LocalTime donusSaati,
-        BigDecimal tonaj,
+        Integer tonaj,
         Integer cikisKm,
         Integer donusKm,
         Integer sfrSrs,
         Integer sfr,
         BigDecimal yakit,
+        BigDecimal alinanYakit,
         String notlar
 ) {}

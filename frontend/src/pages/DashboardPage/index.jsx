@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { fetchTripsForDashboard, fetchTodayStats } from '../../services/trips'
-import { fetchDashboardSayim, fetchUyarilar, BELGE_TURLERI } from '../../services/aracBelgeler'
 import SummaryCards from '../../components/SummaryCards'
-import BelgeDurumBadge from '../../components/BelgeDurumBadge'
+import DashboardBelgeUyari from '../../components/DashboardBelgeUyari'
 import {
   Container,
   Box,
@@ -20,17 +19,8 @@ import {
   TableHead,
   TableRow,
   TableFooter,
-  Chip,
-  Collapse,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
-import WarningAmberIcon from '@mui/icons-material/WarningAmber'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 
 const PRESETS = [
   { label: 'Bugün', value: 'today' },
@@ -111,14 +101,8 @@ export default function DashboardPage() {
   const [tableLoading, setTableLoading] = useState(true)
   const [error, setError] = useState(null)
   const [tableView, setTableView] = useState('bolge')
-  const [belgeSayim, setBelgeSayim] = useState(null)
-  const [uyarilar, setUyarilar] = useState([])
-  const [uyarilarAcik, setUyarilarAcik] = useState(false)
-
   useEffect(() => {
     fetchTodayStats().then(setTodayStats).catch((e) => setError(e.message))
-    fetchDashboardSayim().then(setBelgeSayim).catch(() => {})
-    fetchUyarilar(30).then(setUyarilar).catch(() => {})
   }, [])
 
   const loadTrips = useCallback(() => {
@@ -192,69 +176,8 @@ export default function DashboardPage() {
         kmUyariCount={todayKmUyari}
       />
 
-      {/* Belge Uyarıları kartı */}
-      {belgeSayim && (
-        <Paper elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-          <Box
-            onClick={() => setUyarilarAcik((v) => !v)}
-            sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer', userSelect: 'none', '&:hover': { bgcolor: 'action.hover' } }}
-          >
-            <WarningAmberIcon color="warning" />
-            <Typography variant="subtitle1" fontWeight={700} sx={{ flex: 1 }}>
-              Belge Uyarıları
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {belgeSayim.critical > 0 && (
-                <Chip label={`${belgeSayim.critical} Kritik`} color="error" size="small" sx={{ fontWeight: 700 }} />
-              )}
-              {belgeSayim.warning > 0 && (
-                <Chip label={`${belgeSayim.warning} Uyarı`} color="warning" size="small" sx={{ fontWeight: 700 }} />
-              )}
-              {belgeSayim.expired > 0 && (
-                <Chip label={`${belgeSayim.expired} Süresi Dolmuş`} color="default" size="small" sx={{ fontWeight: 700 }} />
-              )}
-              {belgeSayim.critical === 0 && belgeSayim.warning === 0 && belgeSayim.expired === 0 && (
-                <Chip label="Tümü Geçerli" color="success" size="small" sx={{ fontWeight: 700 }} />
-              )}
-            </Box>
-            {uyarilarAcik ? <KeyboardArrowUpIcon fontSize="small" color="action" /> : <KeyboardArrowDownIcon fontSize="small" color="action" />}
-          </Box>
-
-          <Collapse in={uyarilarAcik}>
-            <Divider />
-            {uyarilar.length === 0 ? (
-              <Typography variant="body2" color="text.disabled" sx={{ textAlign: 'center', py: 3 }}>
-                30 gün içinde dolacak belge yok.
-              </Typography>
-            ) : (
-              <List dense disablePadding>
-                {uyarilar.map((b, i) => {
-                  const turLabel = BELGE_TURLERI.find((t) => t.value === b.belgeTuru)?.label ?? b.belgeTuru
-                  return (
-                    <Box key={b.id}>
-                      <ListItem sx={{ px: 3, py: 1 }}>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace', color: 'primary.dark' }}>
-                                {b.aracPlaka}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">— {turLabel}</Typography>
-                            </Box>
-                          }
-                          secondary={`Bitiş: ${b.bitisTarihi}${b.kurum ? ' · ' + b.kurum : ''}`}
-                        />
-                        <BelgeDurumBadge durum={b.durum} kalanGun={b.kalanGun} />
-                      </ListItem>
-                      {i < uyarilar.length - 1 && <Divider component="li" />}
-                    </Box>
-                  )
-                })}
-              </List>
-            )}
-          </Collapse>
-        </Paper>
-      )}
+      {/* Belge Uyarıları */}
+      <DashboardBelgeUyari />
 
       {/* Dönem filtresi + tablolar */}
       <Paper elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
@@ -319,7 +242,7 @@ export default function DashboardPage() {
                     <TableRow key={r.bolge} hover>
                       <TableCell sx={{ fontWeight: 'medium' }}>{r.bolge}</TableCell>
                       <TableCell align="right">{r.count}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: '600', color: 'warning.main' }}>{r.tonaj.toFixed(1)} t</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: '600', color: 'warning.main' }}>{r.tonaj.toLocaleString('tr-TR')} kg</TableCell>
                       <TableCell align="right">{r.km.toLocaleString('tr-TR')}</TableCell>
                       <TableCell align="right">{r.yakit > 0 ? `${r.yakit.toFixed(0)} L` : <Typography variant="body2" color="text.disabled" component="span">—</Typography>}</TableCell>
                     </TableRow>
@@ -329,7 +252,7 @@ export default function DashboardPage() {
                   <TableRow sx={{ '& td': { fontWeight: 'bold' } }}>
                     <TableCell>Toplam</TableCell>
                     <TableCell align="right">{bolgeRows.reduce((s, r) => s + r.count, 0)}</TableCell>
-                    <TableCell align="right" sx={{ color: 'warning.main' }}>{bolgeRows.reduce((s, r) => s + r.tonaj, 0).toFixed(1)} t</TableCell>
+                    <TableCell align="right" sx={{ color: 'warning.main' }}>{bolgeRows.reduce((s, r) => s + r.tonaj, 0).toLocaleString('tr-TR')} kg</TableCell>
                     <TableCell align="right">{bolgeRows.reduce((s, r) => s + r.km, 0).toLocaleString('tr-TR')}</TableCell>
                     <TableCell align="right">{bolgeRows.reduce((s, r) => s + r.yakit, 0).toFixed(0)} L</TableCell>
                   </TableRow>
@@ -372,7 +295,7 @@ export default function DashboardPage() {
                           </Typography>
                         </TableCell>
                         <TableCell align="right">{r.count}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: '600', color: 'warning.main' }}>{r.tonaj.toFixed(1)} t</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: '600', color: 'warning.main' }}>{r.tonaj.toLocaleString('tr-TR')} kg</TableCell>
                         <TableCell align="right">{r.km.toLocaleString('tr-TR')}</TableCell>
                         <TableCell align="right">{r.yakit > 0 ? `${r.yakit.toFixed(0)} L` : <Typography variant="body2" color="text.disabled" component="span">—</Typography>}</TableCell>
                         <TableCell align="right">{lper100 ? `${lper100}` : <Typography variant="body2" color="text.disabled" component="span">—</Typography>}</TableCell>
@@ -384,7 +307,7 @@ export default function DashboardPage() {
                   <TableRow sx={{ '& td': { fontWeight: 'bold' } }}>
                     <TableCell>Toplam</TableCell>
                     <TableCell align="right">{cekiciRows.reduce((s, r) => s + r.count, 0)}</TableCell>
-                    <TableCell align="right" sx={{ color: 'warning.main' }}>{cekiciRows.reduce((s, r) => s + r.tonaj, 0).toFixed(1)} t</TableCell>
+                    <TableCell align="right" sx={{ color: 'warning.main' }}>{cekiciRows.reduce((s, r) => s + r.tonaj, 0).toLocaleString('tr-TR')} kg</TableCell>
                     <TableCell align="right">{cekiciRows.reduce((s, r) => s + r.km, 0).toLocaleString('tr-TR')}</TableCell>
                     <TableCell align="right">{cekiciRows.reduce((s, r) => s + r.yakit, 0).toFixed(0)} L</TableCell>
                     <TableCell align="right" />
@@ -409,7 +332,7 @@ export default function DashboardPage() {
                     <TableRow key={r.sofor_id} hover>
                       <TableCell sx={{ fontWeight: 'medium' }}>{r.ad_soyad}</TableCell>
                       <TableCell align="right">{r.count}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: '600', color: 'warning.main' }}>{r.tonaj.toFixed(1)} t</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: '600', color: 'warning.main' }}>{r.tonaj.toLocaleString('tr-TR')} kg</TableCell>
                       <TableCell align="right">{r.km.toLocaleString('tr-TR')}</TableCell>
                     </TableRow>
                   ))}
@@ -418,7 +341,7 @@ export default function DashboardPage() {
                   <TableRow sx={{ '& td': { fontWeight: 'bold' } }}>
                     <TableCell>Toplam</TableCell>
                     <TableCell align="right">{soforRows.reduce((s, r) => s + r.count, 0)}</TableCell>
-                    <TableCell align="right" sx={{ color: 'warning.main' }}>{soforRows.reduce((s, r) => s + r.tonaj, 0).toFixed(1)} t</TableCell>
+                    <TableCell align="right" sx={{ color: 'warning.main' }}>{soforRows.reduce((s, r) => s + r.tonaj, 0).toLocaleString('tr-TR')} kg</TableCell>
                     <TableCell align="right">{soforRows.reduce((s, r) => s + r.km, 0).toLocaleString('tr-TR')}</TableCell>
                   </TableRow>
                 </TableFooter>

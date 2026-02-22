@@ -62,14 +62,14 @@ function BelgeFormDialog({ open, aracId, initial, onSave, onClose }) {
     setError(null)
     try {
       const payload = {
-        aracId,
-        belgeTuru:       form.belgeTuru,
-        baslangicTarihi: form.baslangicTarihi || null,
-        bitisTarihi:     form.bitisTarihi,
-        policeNo:        form.policeNo || null,
-        kurum:           form.kurum || null,
-        tutar:           form.tutar ? Number(form.tutar) : null,
-        notlar:          form.notlar || null,
+        arac_id:          aracId,
+        belge_turu:       form.belgeTuru,
+        baslangic_tarihi: form.baslangicTarihi || null,
+        bitis_tarihi:     form.bitisTarihi,
+        police_no:        form.policeNo || null,
+        kurum:            form.kurum || null,
+        tutar:            form.tutar ? Number(form.tutar) : null,
+        notlar:           form.notlar || null,
       }
       if (initial?.id) {
         await updateBelge(initial.id, payload)

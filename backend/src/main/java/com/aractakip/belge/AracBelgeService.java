@@ -3,6 +3,8 @@ package com.aractakip.belge;
 import com.aractakip.arac.AracRepository;
 import com.aractakip.belge.dto.AracBelgeDto;
 import com.aractakip.belge.dto.AracBelgeRequest;
+import com.aractakip.belge.dto.YaklasanBelgeDto;
+import com.aractakip.lokasyon.Sube;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -80,6 +82,61 @@ public class AracBelgeService {
         long critical = guncel.stream().filter(b -> b.getDurum() == BelgeDurum.CRITICAL).count();
         long expired  = guncel.stream().filter(b -> b.getDurum() == BelgeDurum.EXPIRED).count();
         return new AracBelgeDto.DurumSayim(valid, warning, critical, expired);
+    }
+
+    public List<YaklasanBelgeDto> getYaklasan(int gun, String belgeTuru, Integer subeId, Integer bolgeId, String siralama) {
+        List<AracBelge> guncel = belgeRepository.findTumGuncel();
+
+        Comparator<AracBelge> comparator;
+        String sort = siralama != null ? siralama : "";
+        if ("belge_turu".equals(sort)) {
+            comparator = Comparator.comparing(AracBelge::getBelgeTuru)
+                    .thenComparingLong(AracBelge::getKalanGun);
+        } else if ("bolge".equals(sort)) {
+            comparator = Comparator.comparing((AracBelge b) -> {
+                Sube s = b.getArac().getSube();
+                return s != null && s.getBolge() != null ? s.getBolge().getAd() : "";
+            });
+        } else {
+            comparator = Comparator.comparingLong(AracBelge::getKalanGun);
+        }
+
+        return guncel.stream()
+                .filter(b -> b.getKalanGun() <= gun)
+                .filter(b -> belgeTuru == null || belgeTuru.isBlank() || b.getBelgeTuru().equals(belgeTuru))
+                .filter(b -> subeId == null || (b.getArac().getSube() != null && subeId.equals(b.getArac().getSube().getId())))
+                .filter(b -> bolgeId == null || (b.getArac().getSube() != null
+                        && b.getArac().getSube().getBolge() != null
+                        && bolgeId.equals(b.getArac().getSube().getBolge().getId())))
+                .sorted(comparator)
+                .map(this::toYaklasanDto)
+                .toList();
+    }
+
+    private YaklasanBelgeDto toYaklasanDto(AracBelge b) {
+        BelgeDurum durum = b.getDurum();
+        var arac = b.getArac();
+        var sube = arac.getSube();
+        var bolge = sube != null ? sube.getBolge() : null;
+        var depo = bolge != null ? bolge.getDepo() : null;
+        var firma = arac.getFirma();
+        return new YaklasanBelgeDto(
+                b.getId(),
+                b.getBelgeTuru(),
+                b.getBitisTarihi(),
+                b.getKalanGun(),
+                durum.name().toLowerCase(),
+                durum.getRenk(),
+                arac.getId(),
+                arac.getPlaka(),
+                arac.getTur() != null ? arac.getTur().getAd() : null,
+                sube != null ? sube.getId() : null,
+                sube != null ? sube.getAd() : null,
+                bolge != null ? bolge.getAd() : null,
+                depo != null ? depo.getAd() : null,
+                firma != null ? firma.getId() : null,
+                firma != null ? firma.getAd() : null
+        );
     }
 
     private void validateBelgeTuru(String belgeTuru) {

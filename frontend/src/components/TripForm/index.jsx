@@ -17,6 +17,7 @@ const EMPTY_FORM = {
   donus_km: '',
   sfr_srs: '1',
   yakit: '',
+  alinan_yakit: '',
   notlar: '',
 }
 
@@ -66,6 +67,7 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
         donus_km: editingTrip.donus_km?.toString() || '',
         sfr_srs: editingTrip.sfr_srs?.toString() || '1',
         yakit: editingTrip.yakit?.toString() || '',
+        alinan_yakit: editingTrip.alinan_yakit?.toString() || '',
         notlar: editingTrip.notlar || '',
       })
       setError(null)
@@ -118,12 +120,13 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
       sofor_id: form.sofor_id,
       cikis_saati: form.cikis_saati,
       donus_saati: form.donus_saati,
-      tonaj: Number(form.tonaj),
+      tonaj: Math.round(Number(form.tonaj)),
       cikis_km: Number(form.cikis_km),
       donus_km: Number(form.donus_km),
       sfr_srs: Number(form.sfr_srs) || 1,
       sfr: 1,
       yakit: form.yakit ? Number(form.yakit) : null,
+      alinan_yakit: form.alinan_yakit ? Number(form.alinan_yakit) : null,
       notlar: form.notlar || null,
     }
 
@@ -236,8 +239,8 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
       {/* ── YÜK & KM ─────────────────────────────────── */}
       <Section label="Yük & KM" />
       <div>
-        <Label text="Tonaj (ton)" required />
-        <input type="number" name="tonaj" value={form.tonaj} onChange={handleChange} placeholder="0.000" step="0.001" min="0" className={inputCls} required />
+        <Label text="Tonaj (kg)" required />
+        <input type="number" name="tonaj" value={form.tonaj} onChange={handleChange} placeholder="0" step="1" min="0" className={inputCls} required />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -265,7 +268,7 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
 
       {/* ── EK BİLGİ ─────────────────────────────────── */}
       <Section label="Ek Bilgi" />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <div>
           <Label text="Sefer Sırası" />
           <input type="number" name="sfr_srs" value={form.sfr_srs} onChange={handleChange} min="1" className={inputCls} />
@@ -273,6 +276,10 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
         <div>
           <Label text="Yakıt (litre)" />
           <input type="number" name="yakit" value={form.yakit} onChange={handleChange} placeholder="—" step="0.01" min="0" className={inputCls} />
+        </div>
+        <div>
+          <Label text="Alınan Yakıt (lt)" />
+          <input type="number" name="alinan_yakit" value={form.alinan_yakit} onChange={handleChange} placeholder="—" step="0.01" min="0" className={inputCls} />
         </div>
       </div>
       <div>

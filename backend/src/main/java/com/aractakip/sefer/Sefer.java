@@ -51,8 +51,7 @@ public class Sefer {
     @Column(insertable = false, updatable = false)
     private Integer km;
 
-    @Column(precision = 10, scale = 3)
-    private BigDecimal tonaj;
+    private Integer tonaj;
 
     @Column(name = "cikis_km")
     private Integer cikisKm;
@@ -67,6 +66,9 @@ public class Sefer {
 
     @Column(precision = 8, scale = 2)
     private BigDecimal yakit;
+
+    @Column(name = "alinan_yakit", precision = 10, scale = 2)
+    private BigDecimal alinanYakit;
 
     private String notlar;
 

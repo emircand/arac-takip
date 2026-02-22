@@ -24,7 +24,7 @@ export default function SummaryCards({ tripCount, totalTonaj, totalKm, totalYaki
       />
       <Card
         title="Tonaj"
-        value={`${totalTonaj.toFixed(1)} t`}
+        value={`${totalTonaj.toLocaleString('tr-TR')} kg`}
         icon="⚖️"
         bg="bg-orange-50"
         text="text-orange-600"

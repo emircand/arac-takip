@@ -5,9 +5,9 @@ spring:
       write-dates-as-timestamps: false
     default-property-inclusion: NON_NULL
   datasource:
-    url: ${DATABASE_JDBC_URL}
-    username: ${DATABASE_POOLER_USER}
-    password: ${DATABASE_PASSWORD}
+    url: ${DATABASE_JDBC_URL:jdbc:postgresql://localhost:5432/aractakip}
+    username: ${DATABASE_POOLER_USER:aractakip}
+    password: ${DATABASE_PASSWORD:aractakip}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

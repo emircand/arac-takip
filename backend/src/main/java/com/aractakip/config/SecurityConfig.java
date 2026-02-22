@@ -1,6 +1,7 @@
 package com.aractakip.config;
 
 import com.aractakip.auth.JwtFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -44,6 +45,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/dashboard/**").hasRole("YONETICI")
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, e) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"success\":false,\"message\":\"Oturum açınız\"}");
+                        })
+                        .accessDeniedHandler((request, response, e) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"success\":false,\"message\":\"Bu işlem için yetkiniz yok\"}");
+                        })
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

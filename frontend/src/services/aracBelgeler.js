@@ -39,6 +39,16 @@ export function fetchDashboardSayim() {
   return api.get('/api/arac-belgeler/dashboard/sayim')
 }
 
+export function fetchYaklasanBelgeler({ gun = 60, belgeTuru, bolgeId, subeId, siralama } = {}) {
+  const params = new URLSearchParams()
+  params.append('gun', gun)
+  if (belgeTuru) params.append('belge_turu', belgeTuru)
+  if (bolgeId) params.append('bolge_id', bolgeId)
+  if (subeId) params.append('sube_id', subeId)
+  if (siralama) params.append('siralama', siralama)
+  return api.get(`/api/arac-belgeler/yaklasan?${params}`)
+}
+
 export function createBelge(payload) {
   return api.post('/api/arac-belgeler', payload)
 }

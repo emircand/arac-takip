@@ -53,7 +53,7 @@ export default function RecentTripsList({ trips, loading, onEdit, onDelete, dele
               </span>
               <span className="text-gray-200">•</span>
               {trip.tonaj != null && (
-                <StatChip value={`${Number(trip.tonaj).toFixed(3)} t`} />
+                <StatChip value={`${trip.tonaj} kg`} />
               )}
               {trip.km != null && <StatChip value={`${trip.km} km`} />}
               {trip.yakit != null && <StatChip value={`${Number(trip.yakit).toFixed(0)} L`} />}

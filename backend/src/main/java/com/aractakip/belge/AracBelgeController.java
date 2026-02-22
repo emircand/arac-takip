@@ -2,6 +2,7 @@ package com.aractakip.belge;
 
 import com.aractakip.belge.dto.AracBelgeDto;
 import com.aractakip.belge.dto.AracBelgeRequest;
+import com.aractakip.belge.dto.YaklasanBelgeDto;
 import com.aractakip.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -34,6 +35,17 @@ public class AracBelgeController {
             @RequestParam(defaultValue = "30") int gun
     ) {
         return ApiResponse.ok(belgeService.getUyarilar(gun));
+    }
+
+    @GetMapping("/api/arac-belgeler/yaklasan")
+    public ApiResponse<List<YaklasanBelgeDto>> getYaklasan(
+            @RequestParam(defaultValue = "60") int gun,
+            @RequestParam(name = "belge_turu", required = false) String belgeTuru,
+            @RequestParam(name = "sube_id", required = false) Integer subeId,
+            @RequestParam(name = "bolge_id", required = false) Integer bolgeId,
+            @RequestParam(defaultValue = "bitis_tarihi_asc") String siralama
+    ) {
+        return ApiResponse.ok(belgeService.getYaklasan(gun, belgeTuru, subeId, bolgeId, siralama));
     }
 
     @GetMapping("/api/arac-belgeler/dashboard/sayim")
