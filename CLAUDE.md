@@ -5,8 +5,9 @@ Monorepo: frontend/ (React 19+Vite+Tailwind) + backend/ (Spring Boot 3.4+JWT) + 
 
 ## EVERY SESSION — DO THIS FIRST
 1. Read `docs/MODULES.md` — find current module, check status
-2. Work only on the active module
-3. Update status in MODULES.md when done
+2. If module has plan → read `plans/module{N}_plan.md`
+3. Work only on the active module
+4. Update status in MODULES.md when done
 
 ## READ RULE
 Read only the section relevant to your task. Skip the rest.
@@ -32,13 +33,14 @@ arac-takip/
 │   ├── docker-compose.yml
 │   ├── docker-compose.dev.yml
 │   └── nginx/nginx.conf
-├── plans/
-└── docs/
-    ├── SCHEMA.md
-    ├── API.md
-    ├── RULES.md
-    ├── STANDARDS.md
-    └── MODULES.md
+├── plans/                         # module implementation plans
+├── docs/
+│   ├── SCHEMA.md
+│   ├── API.md
+│   ├── RULES.md
+│   ├── STANDARDS.md
+│   └── MODULES.md
+└── CLAUDE.md
 ```
 
 ## DOCS
@@ -47,3 +49,7 @@ arac-takip/
 - Rules:     `docs/RULES.md`
 - Standards: `docs/STANDARDS.md`
 - Modules:   `docs/MODULES.md`
+- Plans:     `plans/module{N}_plan.md`
+
+## CURRENT: Module 5 — Document Tracking
+Plan: `plans/module5_plan.md`

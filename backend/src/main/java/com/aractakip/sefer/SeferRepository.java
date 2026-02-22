@@ -1,31 +1,14 @@
 package com.aractakip.sefer;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-public interface SeferRepository extends JpaRepository<Sefer, UUID> {
-
-    @Query("""
-            SELECT s FROM Sefer s
-            WHERE (:start IS NULL OR s.tarih >= :start)
-              AND (:end   IS NULL OR s.tarih <= :end)
-              AND (:bolge IS NULL OR s.bolge = :bolge)
-              AND (:cekiciId IS NULL OR s.cekici.id = :cekiciId)
-              AND (:soforId  IS NULL OR s.sofor.id = :soforId)
-            ORDER BY s.tarih DESC, s.sfrSrs DESC NULLS LAST
-            """)
-    List<Sefer> findWithFilters(
-            @Param("start") LocalDate start,
-            @Param("end") LocalDate end,
-            @Param("bolge") String bolge,
-            @Param("cekiciId") UUID cekiciId,
-            @Param("soforId") UUID soforId
-    );
+public interface SeferRepository extends JpaRepository<Sefer, UUID>, JpaSpecificationExecutor<Sefer> {
 
     // Dashboard — özet (tarih aralığı)
     @Query(value = """

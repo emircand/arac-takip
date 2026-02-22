@@ -4,10 +4,14 @@ import com.aractakip.arac.AracRepository;
 import com.aractakip.sefer.dto.SeferDto;
 import com.aractakip.sefer.dto.SeferRequest;
 import com.aractakip.sofor.SoforRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -22,11 +26,20 @@ public class SeferService {
 
     public List<SeferDto> getAll(LocalDate start, LocalDate end, String bolge,
                                  UUID cekiciId, UUID soforId) {
-        return seferRepository
-                .findWithFilters(start, end, bolge, cekiciId, soforId)
-                .stream()
-                .map(SeferDto::from)
-                .toList();
+        Specification<Sefer> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (start != null)    predicates.add(cb.greaterThanOrEqualTo(root.get("tarih"), start));
+            if (end != null)      predicates.add(cb.lessThanOrEqualTo(root.get("tarih"), end));
+            if (bolge != null)    predicates.add(cb.equal(root.get("bolge"), bolge));
+            if (cekiciId != null) predicates.add(cb.equal(root.get("cekici").get("id"), cekiciId));
+            if (soforId != null)  predicates.add(cb.equal(root.get("sofor").get("id"), soforId));
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        Sort sort = Sort.by(
+                Sort.Order.desc("tarih"),
+                Sort.Order.desc("sfrSrs").nullsLast()
+        );
+        return seferRepository.findAll(spec, sort).stream().map(SeferDto::from).toList();
     }
 
     public SeferDto create(SeferRequest req, UUID userId) {

@@ -5,6 +5,7 @@ import {
 import {
   fetchAraclar, fetchAracTurleri, createArac, updateArac, toggleAracAktif,
 } from '../../services/araclar'
+import BelgelerTab from '../../components/BelgelerTab'
 
 const inputCls =
   'w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
@@ -372,16 +373,17 @@ function AraclarSection() {
 const TABS = [
   { id: 'soforler', label: 'Şoförler', icon: '👤' },
   { id: 'araclar',  label: 'Araçlar',  icon: '🚛' },
+  { id: 'belgeler', label: 'Belgeler', icon: '📄' },
 ]
 
 export default function TanimlarPage() {
   const [tab, setTab] = useState('soforler')
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-5">
+    <div className="max-w-2xl mx-auto px-4 py-5">
       <div className="mb-5">
         <h1 className="text-xl font-bold text-gray-900">Tanımlar</h1>
-        <p className="text-xs text-gray-400 mt-0.5">Şoför ve araç kayıtlarını yönetin</p>
+        <p className="text-xs text-gray-400 mt-0.5">Şoför, araç ve belge kayıtlarını yönetin</p>
       </div>
 
       {/* Sekmeler */}
@@ -402,6 +404,7 @@ export default function TanimlarPage() {
 
       {tab === 'soforler' && <SoforlerSection />}
       {tab === 'araclar'  && <AraclarSection />}
+      {tab === 'belgeler' && <BelgelerTab />}
     </div>
   )
 }

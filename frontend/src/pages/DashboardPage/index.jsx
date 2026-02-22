@@ -1,6 +1,36 @@
 import { useState, useEffect, useCallback } from 'react'
 import { fetchTripsForDashboard, fetchTodayStats } from '../../services/trips'
+import { fetchDashboardSayim, fetchUyarilar, BELGE_TURLERI } from '../../services/aracBelgeler'
 import SummaryCards from '../../components/SummaryCards'
+import BelgeDurumBadge from '../../components/BelgeDurumBadge'
+import {
+  Container,
+  Box,
+  Typography,
+  Alert,
+  Paper,
+  CircularProgress,
+  Button,
+  ToggleButton,
+  ToggleButtonGroup,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TableFooter,
+  Chip,
+  Collapse,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+} from '@mui/material'
+import RefreshIcon from '@mui/icons-material/Refresh'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 
 const PRESETS = [
   { label: 'Bugün', value: 'today' },
@@ -62,24 +92,17 @@ function aggregateBySofor(trips) {
 
 function EmptyOrLoading({ loading }) {
   if (loading) return (
-    <div className="flex justify-center py-16">
-      <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-    </div>
+    <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+      <CircularProgress />
+    </Box>
   )
   return (
-    <div className="text-center py-14">
-      <span className="text-3xl">📭</span>
-      <p className="text-gray-400 text-sm mt-2">Bu aralıkta kayıt bulunamadı.</p>
-    </div>
+    <Box sx={{ textAlign: 'center', py: 7 }}>
+      <Typography variant="h3" component="span" sx={{ display: 'block', mb: 1 }}>📭</Typography>
+      <Typography variant="body2" color="text.secondary">Bu aralıkta kayıt bulunamadı.</Typography>
+    </Box>
   )
 }
-
-const th = 'px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider'
-const thR = 'px-4 py-3 text-right text-xs font-bold text-gray-400 uppercase tracking-wider'
-const td = 'px-4 py-3 text-sm text-gray-700'
-const tdR = 'px-4 py-3 text-sm text-right text-gray-700'
-const tfL = 'px-4 py-3 text-sm font-bold text-gray-900'
-const tfR = 'px-4 py-3 text-sm font-bold text-right text-gray-900'
 
 export default function DashboardPage() {
   const [preset, setPreset] = useState('today')
@@ -88,9 +111,14 @@ export default function DashboardPage() {
   const [tableLoading, setTableLoading] = useState(true)
   const [error, setError] = useState(null)
   const [tableView, setTableView] = useState('bolge')
+  const [belgeSayim, setBelgeSayim] = useState(null)
+  const [uyarilar, setUyarilar] = useState([])
+  const [uyarilarAcik, setUyarilarAcik] = useState(false)
 
   useEffect(() => {
     fetchTodayStats().then(setTodayStats).catch((e) => setError(e.message))
+    fetchDashboardSayim().then(setBelgeSayim).catch(() => {})
+    fetchUyarilar(30).then(setUyarilar).catch(() => {})
   }, [])
 
   const loadTrips = useCallback(() => {
@@ -114,27 +142,45 @@ export default function DashboardPage() {
   const cekiciRows = aggregateByCekici(trips)
   const soforRows = aggregateBySofor(trips)
 
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-5 space-y-6">
+  const handlePresetChange = (event, newPreset) => {
+    if (newPreset !== null) {
+      setPreset(newPreset);
+    }
+  };
 
+  const handleTableViewChange = (event, newView) => {
+    if (newView !== null) {
+      setTableView(newView);
+    }
+  };
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Başlık */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Bugünün özeti ve dönemsel istatistikler</p>
-        </div>
-        <button
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box>
+          <Typography variant="h5" component="h1" fontWeight="bold" color="text.primary">
+            Dashboard
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+            Bugünün özeti ve dönemsel istatistikler
+          </Typography>
+        </Box>
+        <Button
           onClick={loadTrips}
-          className="text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+          startIcon={<RefreshIcon />}
+          size="small"
+          variant="outlined"
+          sx={{ textTransform: 'none', borderRadius: 2 }}
         >
-          ↻ Yenile
-        </button>
-      </div>
+          Yenile
+        </Button>
+      </Box>
 
       {error && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 rounded-xl px-4 py-3 text-sm">
-          <span>⚠</span> {error}
-        </div>
+        <Alert severity="error" sx={{ borderRadius: 2 }}>
+          {error}
+        </Alert>
       )}
 
       {/* Özet kartlar — her zaman bugün */}
@@ -146,164 +192,241 @@ export default function DashboardPage() {
         kmUyariCount={todayKmUyari}
       />
 
-      {/* Dönem filtresi + tablolar */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        {/* Toolbar */}
-        <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center gap-3 justify-between">
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-            {PRESETS.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setPreset(p.value)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  preset === p.value
-                    ? 'bg-white text-blue-700 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+      {/* Belge Uyarıları kartı */}
+      {belgeSayim && (
+        <Paper elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+          <Box
+            onClick={() => setUyarilarAcik((v) => !v)}
+            sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer', userSelect: 'none', '&:hover': { bgcolor: 'action.hover' } }}
+          >
+            <WarningAmberIcon color="warning" />
+            <Typography variant="subtitle1" fontWeight={700} sx={{ flex: 1 }}>
+              Belge Uyarıları
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {belgeSayim.critical > 0 && (
+                <Chip label={`${belgeSayim.critical} Kritik`} color="error" size="small" sx={{ fontWeight: 700 }} />
+              )}
+              {belgeSayim.warning > 0 && (
+                <Chip label={`${belgeSayim.warning} Uyarı`} color="warning" size="small" sx={{ fontWeight: 700 }} />
+              )}
+              {belgeSayim.expired > 0 && (
+                <Chip label={`${belgeSayim.expired} Süresi Dolmuş`} color="default" size="small" sx={{ fontWeight: 700 }} />
+              )}
+              {belgeSayim.critical === 0 && belgeSayim.warning === 0 && belgeSayim.expired === 0 && (
+                <Chip label="Tümü Geçerli" color="success" size="small" sx={{ fontWeight: 700 }} />
+              )}
+            </Box>
+            {uyarilarAcik ? <KeyboardArrowUpIcon fontSize="small" color="action" /> : <KeyboardArrowDownIcon fontSize="small" color="action" />}
+          </Box>
 
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-            {[['bolge', '📍 Bölge'], ['cekici', '🚛 Çekici'], ['sofor', '👤 Şoför']].map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => setTableView(id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  tableView === id
-                    ? 'bg-white text-blue-700 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {label}
-              </button>
+          <Collapse in={uyarilarAcik}>
+            <Divider />
+            {uyarilar.length === 0 ? (
+              <Typography variant="body2" color="text.disabled" sx={{ textAlign: 'center', py: 3 }}>
+                30 gün içinde dolacak belge yok.
+              </Typography>
+            ) : (
+              <List dense disablePadding>
+                {uyarilar.map((b, i) => {
+                  const turLabel = BELGE_TURLERI.find((t) => t.value === b.belgeTuru)?.label ?? b.belgeTuru
+                  return (
+                    <Box key={b.id}>
+                      <ListItem sx={{ px: 3, py: 1 }}>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace', color: 'primary.dark' }}>
+                                {b.aracPlaka}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">— {turLabel}</Typography>
+                            </Box>
+                          }
+                          secondary={`Bitiş: ${b.bitisTarihi}${b.kurum ? ' · ' + b.kurum : ''}`}
+                        />
+                        <BelgeDurumBadge durum={b.durum} kalanGun={b.kalanGun} />
+                      </ListItem>
+                      {i < uyarilar.length - 1 && <Divider component="li" />}
+                    </Box>
+                  )
+                })}
+              </List>
+            )}
+          </Collapse>
+        </Paper>
+      )}
+
+      {/* Dönem filtresi + tablolar */}
+      <Paper elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+        {/* Toolbar */}
+        <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, justifyContent: 'space-between' }}>
+          <ToggleButtonGroup
+            value={preset}
+            exclusive
+            onChange={handlePresetChange}
+            size="small"
+            sx={{
+              '& .MuiToggleButton-root': { px: 2, py: 0.5, textTransform: 'none', fontWeight: 600 },
+            }}
+          >
+            {PRESETS.map((p) => (
+              <ToggleButton key={p.value} value={p.value}>
+                {p.label}
+              </ToggleButton>
             ))}
-          </div>
-        </div>
+          </ToggleButtonGroup>
+
+          <ToggleButtonGroup
+            value={tableView}
+            exclusive
+            onChange={handleTableViewChange}
+            size="small"
+            sx={{
+              '& .MuiToggleButton-root': { px: 2, py: 0.5, textTransform: 'none', fontWeight: 600 },
+            }}
+          >
+            {[
+              { id: 'bolge', label: '📍 Bölge' },
+              { id: 'cekici', label: '🚛 Çekici' },
+              { id: 'sofor', label: '👤 Şoför' }
+            ].map((v) => (
+              <ToggleButton key={v.id} value={v.id}>
+                {v.label}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        </Box>
 
         {/* Tablolar */}
         {(tableLoading || (bolgeRows.length === 0 && cekiciRows.length === 0)) ? (
           <EmptyOrLoading loading={tableLoading} />
         ) : (
-          <div className="overflow-x-auto">
+          <TableContainer>
             {/* Bölge tablosu */}
             {tableView === 'bolge' && (
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th className={th}>Bölge</th>
-                    <th className={thR}>Sefer</th>
-                    <th className={thR}>Tonaj</th>
-                    <th className={thR}>KM</th>
-                    <th className={thR}>Yakıt</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
+              <Table size="small">
+                <TableHead sx={{ bgcolor: 'grey.50' }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Bölge</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Sefer</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Tonaj</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>KM</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Yakıt</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                   {bolgeRows.map((r) => (
-                    <tr key={r.bolge} className="hover:bg-gray-50 transition-colors">
-                      <td className={td}><span className="font-medium">{r.bolge}</span></td>
-                      <td className={tdR}>{r.count}</td>
-                      <td className={`${tdR} font-semibold text-orange-600`}>{r.tonaj.toFixed(1)} t</td>
-                      <td className={tdR}>{r.km.toLocaleString('tr-TR')}</td>
-                      <td className={tdR}>{r.yakit > 0 ? `${r.yakit.toFixed(0)} L` : <span className="text-gray-300">—</span>}</td>
-                    </tr>
+                    <TableRow key={r.bolge} hover>
+                      <TableCell sx={{ fontWeight: 'medium' }}>{r.bolge}</TableCell>
+                      <TableCell align="right">{r.count}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: '600', color: 'warning.main' }}>{r.tonaj.toFixed(1)} t</TableCell>
+                      <TableCell align="right">{r.km.toLocaleString('tr-TR')}</TableCell>
+                      <TableCell align="right">{r.yakit > 0 ? `${r.yakit.toFixed(0)} L` : <Typography variant="body2" color="text.disabled" component="span">—</Typography>}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-                <tfoot className="bg-gray-50 border-t-2 border-gray-200">
-                  <tr>
-                    <td className={tfL}>Toplam</td>
-                    <td className={tfR}>{bolgeRows.reduce((s, r) => s + r.count, 0)}</td>
-                    <td className={`${tfR} text-orange-600`}>{bolgeRows.reduce((s, r) => s + r.tonaj, 0).toFixed(1)} t</td>
-                    <td className={tfR}>{bolgeRows.reduce((s, r) => s + r.km, 0).toLocaleString('tr-TR')}</td>
-                    <td className={tfR}>{bolgeRows.reduce((s, r) => s + r.yakit, 0).toFixed(0)} L</td>
-                  </tr>
-                </tfoot>
-              </table>
+                </TableBody>
+                <TableFooter sx={{ bgcolor: 'grey.50' }}>
+                  <TableRow sx={{ '& td': { fontWeight: 'bold' } }}>
+                    <TableCell>Toplam</TableCell>
+                    <TableCell align="right">{bolgeRows.reduce((s, r) => s + r.count, 0)}</TableCell>
+                    <TableCell align="right" sx={{ color: 'warning.main' }}>{bolgeRows.reduce((s, r) => s + r.tonaj, 0).toFixed(1)} t</TableCell>
+                    <TableCell align="right">{bolgeRows.reduce((s, r) => s + r.km, 0).toLocaleString('tr-TR')}</TableCell>
+                    <TableCell align="right">{bolgeRows.reduce((s, r) => s + r.yakit, 0).toFixed(0)} L</TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
             )}
 
             {/* Çekici tablosu */}
             {tableView === 'cekici' && (
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th className={th}>Plaka</th>
-                    <th className={thR}>Sefer</th>
-                    <th className={thR}>Tonaj</th>
-                    <th className={thR}>KM</th>
-                    <th className={thR}>Yakıt</th>
-                    <th className={thR}>L/100km</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
+              <Table size="small">
+                <TableHead sx={{ bgcolor: 'grey.50' }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Plaka</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Sefer</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Tonaj</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>KM</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Yakıt</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>L/100km</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                   {cekiciRows.map((r) => {
-                    const lper100 = r.km > 0 && r.yakit > 0
-                      ? ((r.yakit / r.km) * 100).toFixed(1)
-                      : null
+                    const lper100 = r.km > 0 && r.yakit > 0 ? ((r.yakit / r.km) * 100).toFixed(1) : null
                     return (
-                      <tr key={r.cekici_id} className="hover:bg-gray-50 transition-colors">
-                        <td className={td}>
-                          <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md text-xs">
+                      <TableRow key={r.cekici_id} hover>
+                        <TableCell>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontFamily: 'monospace',
+                              fontWeight: 'bold',
+                              color: 'primary.dark',
+                              bgcolor: '#eff6ff',
+                              px: 1,
+                              py: 0.5,
+                              borderRadius: 1,
+                            }}
+                          >
                             {r.plaka}
-                          </span>
-                        </td>
-                        <td className={tdR}>{r.count}</td>
-                        <td className={`${tdR} font-semibold text-orange-600`}>{r.tonaj.toFixed(1)} t</td>
-                        <td className={tdR}>{r.km.toLocaleString('tr-TR')}</td>
-                        <td className={tdR}>{r.yakit > 0 ? `${r.yakit.toFixed(0)} L` : <span className="text-gray-300">—</span>}</td>
-                        <td className={tdR}>{lper100 ? `${lper100}` : <span className="text-gray-300">—</span>}</td>
-                      </tr>
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">{r.count}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: '600', color: 'warning.main' }}>{r.tonaj.toFixed(1)} t</TableCell>
+                        <TableCell align="right">{r.km.toLocaleString('tr-TR')}</TableCell>
+                        <TableCell align="right">{r.yakit > 0 ? `${r.yakit.toFixed(0)} L` : <Typography variant="body2" color="text.disabled" component="span">—</Typography>}</TableCell>
+                        <TableCell align="right">{lper100 ? `${lper100}` : <Typography variant="body2" color="text.disabled" component="span">—</Typography>}</TableCell>
+                      </TableRow>
                     )
                   })}
-                </tbody>
-                <tfoot className="bg-gray-50 border-t-2 border-gray-200">
-                  <tr>
-                    <td className={tfL}>Toplam</td>
-                    <td className={tfR}>{cekiciRows.reduce((s, r) => s + r.count, 0)}</td>
-                    <td className={`${tfR} text-orange-600`}>{cekiciRows.reduce((s, r) => s + r.tonaj, 0).toFixed(1)} t</td>
-                    <td className={tfR}>{cekiciRows.reduce((s, r) => s + r.km, 0).toLocaleString('tr-TR')}</td>
-                    <td className={tfR}>{cekiciRows.reduce((s, r) => s + r.yakit, 0).toFixed(0)} L</td>
-                    <td className={tfR} />
-                  </tr>
-                </tfoot>
-              </table>
+                </TableBody>
+                <TableFooter sx={{ bgcolor: 'grey.50' }}>
+                  <TableRow sx={{ '& td': { fontWeight: 'bold' } }}>
+                    <TableCell>Toplam</TableCell>
+                    <TableCell align="right">{cekiciRows.reduce((s, r) => s + r.count, 0)}</TableCell>
+                    <TableCell align="right" sx={{ color: 'warning.main' }}>{cekiciRows.reduce((s, r) => s + r.tonaj, 0).toFixed(1)} t</TableCell>
+                    <TableCell align="right">{cekiciRows.reduce((s, r) => s + r.km, 0).toLocaleString('tr-TR')}</TableCell>
+                    <TableCell align="right">{cekiciRows.reduce((s, r) => s + r.yakit, 0).toFixed(0)} L</TableCell>
+                    <TableCell align="right" />
+                  </TableRow>
+                </TableFooter>
+              </Table>
             )}
 
             {/* Şoför tablosu */}
             {tableView === 'sofor' && (
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th className={th}>Şoför</th>
-                    <th className={thR}>Sefer</th>
-                    <th className={thR}>Tonaj</th>
-                    <th className={thR}>KM</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
+              <Table size="small">
+                <TableHead sx={{ bgcolor: 'grey.50' }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Şoför</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Sefer</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Tonaj</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>KM</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                   {soforRows.map((r) => (
-                    <tr key={r.sofor_id} className="hover:bg-gray-50 transition-colors">
-                      <td className={td}><span className="font-medium">{r.ad_soyad}</span></td>
-                      <td className={tdR}>{r.count}</td>
-                      <td className={`${tdR} font-semibold text-orange-600`}>{r.tonaj.toFixed(1)} t</td>
-                      <td className={tdR}>{r.km.toLocaleString('tr-TR')}</td>
-                    </tr>
+                    <TableRow key={r.sofor_id} hover>
+                      <TableCell sx={{ fontWeight: 'medium' }}>{r.ad_soyad}</TableCell>
+                      <TableCell align="right">{r.count}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: '600', color: 'warning.main' }}>{r.tonaj.toFixed(1)} t</TableCell>
+                      <TableCell align="right">{r.km.toLocaleString('tr-TR')}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-                <tfoot className="bg-gray-50 border-t-2 border-gray-200">
-                  <tr>
-                    <td className={tfL}>Toplam</td>
-                    <td className={tfR}>{soforRows.reduce((s, r) => s + r.count, 0)}</td>
-                    <td className={`${tfR} text-orange-600`}>{soforRows.reduce((s, r) => s + r.tonaj, 0).toFixed(1)} t</td>
-                    <td className={tfR}>{soforRows.reduce((s, r) => s + r.km, 0).toLocaleString('tr-TR')}</td>
-                  </tr>
-                </tfoot>
-              </table>
+                </TableBody>
+                <TableFooter sx={{ bgcolor: 'grey.50' }}>
+                  <TableRow sx={{ '& td': { fontWeight: 'bold' } }}>
+                    <TableCell>Toplam</TableCell>
+                    <TableCell align="right">{soforRows.reduce((s, r) => s + r.count, 0)}</TableCell>
+                    <TableCell align="right" sx={{ color: 'warning.main' }}>{soforRows.reduce((s, r) => s + r.tonaj, 0).toFixed(1)} t</TableCell>
+                    <TableCell align="right">{soforRows.reduce((s, r) => s + r.km, 0).toLocaleString('tr-TR')}</TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
             )}
-          </div>
+          </TableContainer>
         )}
-      </div>
-    </div>
+      </Paper>
+    </Container>
   )
 }

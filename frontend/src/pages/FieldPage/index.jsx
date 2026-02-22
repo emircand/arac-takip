@@ -5,16 +5,27 @@ import { fetchRecentTrips, deleteTrip } from '../../services/trips'
 import TripForm from '../../components/TripForm'
 import RecentTripsList from '../../components/RecentTripsList'
 
+import {
+  Container,
+  Box,
+  Typography,
+  Alert,
+  Paper,
+  CircularProgress,
+  Button
+} from '@mui/material'
+import RefreshIcon from '@mui/icons-material/Refresh'
+
 export default function FieldPage() {
   const [cekiciler, setCekiciler] = useState([])
-  const [dorseler, setDorseler]   = useState([])
-  const [soforler, setSoforler]   = useState([])
-  const [trips, setTrips]         = useState([])
-  const [loadingData, setLoadingData]   = useState(true)
+  const [dorseler, setDorseler] = useState([])
+  const [soforler, setSoforler] = useState([])
+  const [trips, setTrips] = useState([])
+  const [loadingData, setLoadingData] = useState(true)
   const [loadingTrips, setLoadingTrips] = useState(true)
-  const [error, setError]         = useState(null)
-  const [editingTrip, setEditingTrip]   = useState(null)
-  const [deletingId, setDeletingId]     = useState(null)
+  const [error, setError] = useState(null)
+  const [editingTrip, setEditingTrip] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
   const formRef = useRef(null)
 
   useEffect(() => {
@@ -58,27 +69,42 @@ export default function FieldPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-5 space-y-5">
+    <Container maxWidth="sm" sx={{ py: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Sefer Girişi</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Yeni sefer ekle veya mevcut seferi düzenle</p>
-        </div>
-      </div>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box>
+          <Typography variant="h5" component="h1" fontWeight="bold" color="text.primary">
+            Sefer Girişi
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+            Yeni sefer ekle veya mevcut seferi düzenle
+          </Typography>
+        </Box>
+      </Box>
 
       {error && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 rounded-xl px-4 py-3 text-sm">
-          <span>⚠</span> {error}
-        </div>
+        <Alert severity="error" sx={{ borderRadius: 2 }}>
+          {error}
+        </Alert>
       )}
 
-      <div ref={formRef} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+      <Paper
+        ref={formRef}
+        elevation={0}
+        sx={{
+          p: 3,
+          borderRadius: 4,
+          border: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
         {loadingData ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm text-gray-400">Araç listesi yükleniyor...</span>
-          </div>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 6, gap: 2 }}>
+            <CircularProgress size={32} />
+            <Typography variant="body2" color="text.secondary">
+              Araç listesi yükleniyor...
+            </Typography>
+          </Box>
         ) : (
           <TripForm
             cekiciler={cekiciler}
@@ -89,22 +115,29 @@ export default function FieldPage() {
             onTripSaved={refreshTrips}
           />
         )}
-      </div>
+      </Paper>
 
-      <div className="flex items-center justify-between pt-1">
-        <div>
-          <h2 className="text-sm font-bold text-gray-700">Son Seferler</h2>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pt: 1 }}>
+        <Box>
+          <Typography variant="subtitle2" fontWeight="bold" color="text.primary">
+            Son Seferler
+          </Typography>
           {!loadingTrips && trips.length > 0 && (
-            <p className="text-xs text-gray-400">{trips.length} kayıt gösteriliyor</p>
+            <Typography variant="caption" color="text.secondary">
+              {trips.length} kayıt gösteriliyor
+            </Typography>
           )}
-        </div>
-        <button
+        </Box>
+        <Button
           onClick={refreshTrips}
-          className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+          startIcon={<RefreshIcon />}
+          size="small"
+          variant="outlined"
+          sx={{ textTransform: 'none', borderRadius: 2 }}
         >
-          ↻ Yenile
-        </button>
-      </div>
+          Yenile
+        </Button>
+      </Box>
 
       <RecentTripsList
         trips={trips}
@@ -113,6 +146,6 @@ export default function FieldPage() {
         onDelete={handleDelete}
         deletingId={deletingId}
       />
-    </div>
+    </Container>
   )
 }
