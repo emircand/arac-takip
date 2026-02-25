@@ -53,9 +53,13 @@ Page/Component → service (src/services/) → apiClient.js → Backend API
 
 | Tablo | Açıklama |
 |-------|----------|
+| `firmalar` | Araçların bağlı olduğu firmalar (alt işverenler vs.) |
+| `depolar` | En üst seviye lokasyon (Adana, İzmir vs. — operasyon noktası) |
+| `bolgeler` | Depolara bağlı bölgeler |
+| `subeler` | Bölgelere bağlı şubeler. Araç ve şoförlerin temel lokasyon birimi. |
 | `arac_turleri` | cekici / dorse / pikap + özellik flag'leri |
-| `araclar` | Araç kaydı; `tur_id → arac_turleri` |
-| `soforler` | Şoför bilgisi |
+| `araclar` | Araç kaydı; `tur_id → arac_turleri`, `firma_id → firmalar`, `sube_id → subeler`. `plaka`, `aktif`, `arvento_no` gibi alanlar. |
+| `soforler` | Şoför bilgisi; `sube_id → subeler`. |
 | `profiller` | Kullanıcılar; bcrypt şifre, rol: `saha` / `yonetici` |
 | `seferler` | Sefer kaydı; ana işlem tablosu |
 | `arac_belgeler` | Araç belgeleri (muayene, sigorta, kasko, arvato_gps, diğer) |
@@ -111,6 +115,7 @@ Spring Security'de `ROLE_YONETICI` → `/api/dashboard/**` endpoint'leri korumal
 | `BelgeDurumBadge` | Renk kodlu belge durum rozeti |
 | `SummaryCards` | Dashboard özet kartları (sefer / tonaj / km / yakıt) |
 | `SearchableSelect` | Aranabilir dropdown — araç/şoför seçimi için |
+| `TanimlarPage` | Şoförler, Araçlar, Belgeler tableri bulunur. Lokasyon ağacı ve firma verileriyle entegredir. |
 
 ---
 
@@ -183,6 +188,8 @@ Auth: `Authorization: Bearer <token>` (tüm endpoint'ler, `/api/auth/**` hariç)
 | Domain | Endpoint'ler |
 |--------|-------------|
 | Auth | `POST /auth/login`, `GET /auth/me` |
+| Firma | `GET /firmalar` |
+| Lokasyon | `GET /depolar`, `GET /bolgeler`, `GET /subeler`, `GET /lokasyonlar/agac` |
 | Araclar | `GET/POST /araclar`, `PUT/PATCH /araclar/:id`, `GET /arac-turleri`, `GET /araclar/sefere-katilabilir` |
 | Soforler | `GET/POST /soforler`, `PUT/PATCH /soforler/:id` |
 | Seferler | `GET/POST /seferler`, `PUT/DELETE /seferler/:id` |

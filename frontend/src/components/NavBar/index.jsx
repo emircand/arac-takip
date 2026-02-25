@@ -8,7 +8,10 @@ export default function NavBar() {
   const navItems = [
     { to: '/saha', label: 'Saha', icon: '🚛' },
     { to: '/tanimlar', label: 'Tanımlar', icon: '📋' },
-    ...(isYonetici ? [{ to: '/dashboard', label: 'Dashboard', icon: '📊' }] : []),
+    ...(isYonetici ? [
+      { to: '/yakit',     label: 'Yakıt',     icon: '⛽' },
+      { to: '/dashboard', label: 'Dashboard', icon: '📊' },
+    ] : []),
   ]
 
   const desktopLink = ({ isActive }) =>

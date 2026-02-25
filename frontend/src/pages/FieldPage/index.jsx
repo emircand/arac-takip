@@ -14,7 +14,7 @@ import {
   CircularProgress,
   Button
 } from '@mui/material'
-import RefreshIcon from '@mui/icons-material/Refresh'
+import { RefreshCw } from 'lucide-react'
 
 export default function FieldPage() {
   const [cekiciler, setCekiciler] = useState([])
@@ -130,7 +130,7 @@ export default function FieldPage() {
         </Box>
         <Button
           onClick={refreshTrips}
-          startIcon={<RefreshIcon />}
+          startIcon={<RefreshCw size={14} />}
           size="small"
           variant="outlined"
           sx={{ textTransform: 'none', borderRadius: 2 }}

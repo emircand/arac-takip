@@ -5,8 +5,7 @@ import BelgeFormModal from '../BelgeFormModal'
 import {
   Box, Typography, Paper, Button, CircularProgress,
 } from '@mui/material'
-import EditIcon from '@mui/icons-material/Edit'
-import AddIcon from '@mui/icons-material/Add'
+import { Pencil, Plus } from 'lucide-react'
 
 const OZET_TURLERI = ['muayene', 'sigorta', 'kasko', 'arvato_gps']
 
@@ -64,7 +63,7 @@ export default function AracBelgeOzet({ aracId, aracPlaka }) {
                   </Typography>
                   <Button
                     size="small"
-                    startIcon={<EditIcon />}
+                    startIcon={<Pencil size={14} />}
                     sx={{ mt: 1, textTransform: 'none', px: 0 }}
                     onClick={() => setModal({ belgeTuru: tur, belge })}
                   >
@@ -78,7 +77,7 @@ export default function AracBelgeOzet({ aracId, aracPlaka }) {
                   </Typography>
                   <Button
                     size="small"
-                    startIcon={<AddIcon />}
+                    startIcon={<Plus size={14} />}
                     sx={{ mt: 0.5, textTransform: 'none', px: 0 }}
                     onClick={() => setModal({ belgeTuru: tur, belge: null })}
                   >

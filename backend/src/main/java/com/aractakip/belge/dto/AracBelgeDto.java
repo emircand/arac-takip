@@ -3,7 +3,6 @@ package com.aractakip.belge.dto;
 import com.aractakip.belge.AracBelge;
 import com.aractakip.belge.BelgeDurum;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -15,12 +14,8 @@ public class AracBelgeDto {
             UUID aracId,
             String aracPlaka,
             String belgeTuru,
-            LocalDate baslangicTarihi,
             LocalDate bitisTarihi,
-            String policeNo,
-            String kurum,
-            BigDecimal tutar,
-            String notlar,
+            String cihazNo,
             long kalanGun,
             String durum,
             String durumRenk,
@@ -34,12 +29,8 @@ public class AracBelgeDto {
                     b.getArac().getId(),
                     b.getArac().getPlaka(),
                     b.getBelgeTuru(),
-                    b.getBaslangicTarihi(),
                     b.getBitisTarihi(),
-                    b.getPoliceNo(),
-                    b.getKurum(),
-                    b.getTutar(),
-                    b.getNotlar(),
+                    b.getCihazNo(),
                     kalan,
                     durum.name().toLowerCase(),
                     durum.getRenk(),

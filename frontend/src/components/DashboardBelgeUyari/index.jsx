@@ -10,9 +10,7 @@ import {
   Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
   CircularProgress,
 } from '@mui/material'
-import WarningAmberIcon from '@mui/icons-material/WarningAmber'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import { TriangleAlert, ChevronDown, ChevronUp } from 'lucide-react'
 
 const SIRALAMA = [
   { value: 'bitis_tarihi_asc', label: 'Tarihe Göre' },
@@ -77,7 +75,7 @@ export default function DashboardBelgeUyari() {
         onClick={() => setAcik(v => !v)}
         sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer', userSelect: 'none', '&:hover': { bgcolor: 'action.hover' } }}
       >
-        <WarningAmberIcon color="warning" />
+        <TriangleAlert size={18} className="text-amber-500" />
         <Typography variant="subtitle1" fontWeight={700} sx={{ flex: 1 }}>
           Belge Uyarıları
         </Typography>
@@ -97,7 +95,7 @@ export default function DashboardBelgeUyari() {
             )}
           </Box>
         )}
-        {acik ? <KeyboardArrowUpIcon fontSize="small" color="action" /> : <KeyboardArrowDownIcon fontSize="small" color="action" />}
+        {acik ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />}
       </Box>
 
       <Collapse in={acik}>

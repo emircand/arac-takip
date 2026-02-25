@@ -38,7 +38,7 @@ public class AracController {
 
     @GetMapping("/api/araclar/dorseler")
     public ApiResponse<List<Arac>> getDorseler(@RequestParam(required = false) Boolean aktif) {
-        return ApiResponse.ok(aracService.getAll("dorse", aktif));
+        return ApiResponse.ok(aracService.getAll("semitreyler", aktif));
     }
 
     @PostMapping("/api/araclar")

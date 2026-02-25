@@ -1,13 +1,12 @@
-import { useState, useEffect, useCallback } from 'react'
-import {
-  fetchAllSoforler, createSofor, updateSofor, toggleSoforActive,
-} from '../../services/soforler'
-import {
-  fetchAraclar, fetchAracTurleri, createArac, updateArac, toggleAracAktif,
-} from '../../services/araclar'
+import { useState, useEffect, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { fetchLokasyonAgac } from '../../services/lokasyon'
 import { fetchFirmalar } from '../../services/firmalar'
-import BelgelerTab from '../../components/BelgelerTab'
+import { useSoforler, useCreateSofor, useUpdateSofor, useToggleSoforActive } from '../../hooks/useSoforler'
+import { useAraclar, useAracTurleri, useCreateArac, useUpdateArac, useToggleAracAktif } from '../../hooks/useAraclar'
+import AracBelgeleriDialog from '../../components/AracBelgeleriDialog'
+import { Pencil, FileText, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const inputCls =
   'w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
@@ -35,9 +34,13 @@ function Badge({ aktif }) {
 
 function TurBadge({ ad }) {
   const colors = {
-    cekici: 'bg-blue-100 text-blue-700',
-    dorse: 'bg-orange-100 text-orange-700',
-    pikap: 'bg-purple-100 text-purple-700',
+    cekici:      'bg-blue-100 text-blue-700',
+    semitreyler: 'bg-orange-100 text-orange-700',
+    kamyonet:    'bg-cyan-100 text-cyan-700',
+    otomobil:    'bg-green-100 text-green-700',
+    suv:         'bg-lime-100 text-lime-700',
+    'pick-up':   'bg-purple-100 text-purple-700',
+    panelvan:    'bg-rose-100 text-rose-700',
   }
   return (
     <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full capitalize ${colors[ad] ?? 'bg-gray-100 text-gray-600'}`}>
@@ -51,9 +54,13 @@ const DURUMLAR = ['aktif', 'yedek', 'serviste', 'satıldı', 'hurda']
 function flatSubeler(agac) {
   return agac.flatMap((d) =>
     d.bolgeler.flatMap((b) =>
-      b.subeler.map((s) => ({ id: s.id, ad: s.ad, bolgeAd: b.ad, depoAd: d.ad }))
+      b.subeler.map((s) => ({ id: s.id, ad: s.ad, bolgeId: b.id, bolgeAd: b.ad, depoAd: d.ad }))
     )
   )
+}
+
+function flatBolgeler(agac) {
+  return agac.flatMap((d) => d.bolgeler.map((b) => ({ id: b.id, ad: b.ad })))
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
@@ -78,9 +85,7 @@ function Modal({ title, onClose, onSave, saving, saveLabel = 'Kaydet', children 
             onClick={onClose}
             className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-            </svg>
+            <X size={16} />
           </button>
         </div>
         {/* Body */}
@@ -115,23 +120,18 @@ function Modal({ title, onClose, onSave, saving, saveLabel = 'Kaydet', children 
 const EMPTY_SOFOR = { ad_soyad: '', telefon: '', sube_id: '' }
 
 function SoforlerSection({ agac }) {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(null) // { mode:'add'|'edit', form:{}, itemId }
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
+  const [modal, setModal] = useState(null)
+  const [ara, setAra] = useState('')
+  const [filterAktif, setFilterAktif] = useState('hepsi')
 
+  const { data: items = [], isLoading: loading, error: qError } = useSoforler()
+  const createMut  = useCreateSofor()
+  const updateMut  = useUpdateSofor()
+  const toggleMut  = useToggleSoforActive()
+
+  const saving = createMut.isPending || updateMut.isPending
+  const error  = qError?.message ?? createMut.error?.message ?? updateMut.error?.message ?? null
   const subeler = flatSubeler(agac)
-
-  const load = useCallback(() => {
-    setLoading(true)
-    fetchAllSoforler()
-      .then(setItems)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => { load() }, [load])
 
   function setField(field) {
     return (e) => setModal((m) => m ? ({ ...m, form: { ...m.form, [field]: e.target.value } }) : m)
@@ -147,28 +147,46 @@ function SoforlerSection({ agac }) {
 
   async function handleSave() {
     if (!modal.form.ad_soyad?.trim()) return
-    setSaving(true)
-    try {
-      const payload = buildPayload(modal.form)
-      if (modal.mode === 'add') {
-        await createSofor({ ...payload, aktif: true })
-      } else {
-        await updateSofor(modal.itemId, payload)
-      }
-      setModal(null)
-      load()
-    } catch (err) { setError(err.message) }
-    finally { setSaving(false) }
+    const payload = buildPayload(modal.form)
+    if (modal.mode === 'add') {
+      await createMut.mutateAsync({ ...payload, aktif: true })
+    } else {
+      await updateMut.mutateAsync({ id: modal.itemId, payload })
+    }
+    setModal(null)
   }
 
-  async function handleToggle(id, aktif) {
-    try { await toggleSoforActive(id, !aktif); load() }
-    catch (err) { setError(err.message) }
+  function handleToggle(id, aktif) {
+    toggleMut.mutate({ id, aktif: !aktif })
   }
+
+  const visibleSofor = useMemo(() => items.filter((s) => {
+    if (filterAktif === 'aktif' && !s.aktif) return false
+    if (filterAktif === 'pasif' && s.aktif) return false
+    if (ara && !s.ad_soyad?.toLowerCase().includes(ara.toLowerCase())) return false
+    return true
+  }), [items, filterAktif, ara])
 
   return (
     <section className="space-y-3">
       {error && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{error}</div>}
+
+      {/* Filtreler */}
+      <div className="flex gap-2 items-center">
+        <input
+          value={ara} onChange={(e) => setAra(e.target.value)}
+          placeholder="Ad soyad ara..."
+          className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <div className="flex gap-1">
+          {[['hepsi', 'Tümü'], ['aktif', 'Aktif'], ['pasif', 'Pasif']].map(([val, lbl]) => (
+            <button key={val} onClick={() => setFilterAktif(val)}
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors ${filterAktif === val ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <button
         onClick={() => setModal({ mode: 'add', form: EMPTY_SOFOR, itemId: null })}
@@ -181,11 +199,11 @@ function SoforlerSection({ agac }) {
         <div className="flex justify-center py-10">
           <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : items.length === 0 ? (
-        <div className="text-center py-10 text-gray-300 text-sm">Henüz şoför eklenmedi.</div>
+      ) : visibleSofor.length === 0 ? (
+        <div className="text-center py-10 text-gray-300 text-sm">Şoför bulunamadı.</div>
       ) : (
         <div className="space-y-2">
-          {items.map((item) => (
+          {visibleSofor.map((item) => (
             <div key={item.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="flex items-center px-4 py-3 gap-3">
                 <div className="flex-1 min-w-0">
@@ -275,40 +293,53 @@ const EMPTY_ARAC = {
   firma_id: '',
   bos_agirlik: '', lastik_tipi: '', arvento_no: '',
   depo_id: '', bolge_id: '', sube_id: '',
-  onceki_plaka: '', durumu: 'aktif',
+  onceki_plaka: '', durumu: 'aktif', aktif: true,
 }
 
 function AraclarSection({ agac, firmalar }) {
-  const [items, setItems] = useState([])
-  const [turler, setTurler] = useState([])
+  const [belgeDlg, setBelgeDlg] = useState(null)
   const [filterTur, setFilterTur] = useState('hepsi')
-  const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(null) // { mode:'add'|'edit', form:{}, itemId }
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
+  const [filterAktif, setFilterAktif] = useState('hepsi')
+  const [filterFirma, setFilterFirma] = useState('')
+  const [filterBolge, setFilterBolge] = useState('')
+  const [filterSube, setFilterSube] = useState('')
+  const [ara, setAra] = useState('')
+  const [modal, setModal] = useState(null)
 
-  const load = useCallback(() => {
-    setLoading(true)
-    fetchAraclar()
-      .then(setItems)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [])
+  const { data: items = [], isLoading: loading, error: qError } = useAraclar()
+  const { data: turler = [] } = useAracTurleri()
+  const createMut = useCreateArac()
+  const updateMut = useUpdateArac()
+  const toggleMut = useToggleAracAktif()
 
-  useEffect(() => {
-    fetchAracTurleri().then((data) => {
-      setTurler(data)
-    }).catch((e) => setError(e.message))
-    load()
-  }, [load])
+  const saving = createMut.isPending || updateMut.isPending
+  const error  = qError?.message ?? createMut.error?.message ?? updateMut.error?.message ?? null
 
-  const visible = filterTur === 'hepsi' ? items : items.filter((a) => a.tur?.ad === filterTur)
+  const bolgeler = useMemo(() => flatBolgeler(agac), [agac])
+  const subeSecenekleri = useMemo(
+    () => flatSubeler(agac).filter((s) => !filterBolge || String(s.bolgeId) === filterBolge),
+    [agac, filterBolge]
+  )
+
+  const visible = useMemo(() => items.filter((a) => {
+    if (filterTur !== 'hepsi' && a.tur?.ad !== filterTur) return false
+    if (filterAktif === 'aktif' && !a.aktif) return false
+    if (filterAktif === 'pasif' && a.aktif) return false
+    if (filterFirma && String(a.firma?.id) !== filterFirma) return false
+    if (filterBolge && String(a.sube?.bolge?.id) !== filterBolge) return false
+    if (filterSube && String(a.sube?.id) !== filterSube) return false
+    if (ara) {
+      const q = ara.toLowerCase()
+      if (!a.plaka?.toLowerCase().includes(q) && !a.marka?.toLowerCase().includes(q)) return false
+    }
+    return true
+  }), [items, filterTur, filterAktif, filterFirma, filterBolge, filterSube, ara])
 
   // Modal field setter with cascade logic
   function setField(field) {
     return (e) => setModal((m) => {
       if (!m) return m
-      const value = e.target.value
+      const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
       const next = { ...m.form, [field]: value }
       if (field === 'depo_id') { next.bolge_id = ''; next.sube_id = '' }
       if (field === 'bolge_id') { next.sube_id = '' }
@@ -320,7 +351,7 @@ function AraclarSection({ agac, firmalar }) {
     return {
       plaka: form.plaka.trim().toUpperCase(),
       tur_id: form.tur_id || undefined,
-      aktif: true,
+      aktif: form.aktif ?? true,
       marka: form.marka || null,
       model_yili: form.model_yili ? Number(form.model_yili) : null,
       cinsi: form.cinsi || null,
@@ -340,23 +371,17 @@ function AraclarSection({ agac, firmalar }) {
 
   async function handleSave() {
     if (!modal.form.plaka?.trim() || !modal.form.tur_id) return
-    setSaving(true)
-    try {
-      const payload = buildPayload(modal.form)
-      if (modal.mode === 'add') {
-        await createArac(payload)
-      } else {
-        await updateArac(modal.itemId, payload)
-      }
-      setModal(null)
-      load()
-    } catch (err) { setError(err.message) }
-    finally { setSaving(false) }
+    const payload = buildPayload(modal.form)
+    if (modal.mode === 'add') {
+      await createMut.mutateAsync(payload)
+    } else {
+      await updateMut.mutateAsync({ id: modal.itemId, payload })
+    }
+    setModal(null)
   }
 
-  async function handleToggle(id, aktif) {
-    try { await toggleAracAktif(id, !aktif); load() }
-    catch (err) { setError(err.message) }
+  function handleToggle(id, aktif) {
+    toggleMut.mutate({ id, aktif: !aktif })
   }
 
   function openAdd() {
@@ -386,6 +411,7 @@ function AraclarSection({ agac, firmalar }) {
         sube_id: item.sube?.id ?? '',
         onceki_plaka: item.onceki_plaka ?? '',
         durumu: item.durumu ?? 'aktif',
+        aktif: item.aktif ?? true,
       },
       itemId: item.id,
     })
@@ -482,6 +508,11 @@ function AraclarSection({ agac, firmalar }) {
               ))}
             </select>
           </div>
+          <div className="flex items-center gap-2 pt-1">
+            <input type="checkbox" id="arac-aktif" checked={!!form.aktif} onChange={setField('aktif')}
+              className="w-4 h-4 rounded accent-blue-600 cursor-pointer" />
+            <label htmlFor="arac-aktif" className="text-sm text-gray-700 cursor-pointer select-none">Aktif araç</label>
+          </div>
         </div>
 
         <SectionDivider label="Kimlik" />
@@ -536,6 +567,38 @@ function AraclarSection({ agac, firmalar }) {
     <section className="space-y-3">
       {error && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{error}</div>}
 
+      {/* Filtreler */}
+      <div className="flex gap-2 items-center">
+        <input
+          value={ara} onChange={(e) => setAra(e.target.value)}
+          placeholder="Plaka veya marka ara..."
+          className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <div className="flex gap-1">
+          {[['hepsi', 'Tümü'], ['aktif', 'Aktif'], ['pasif', 'Pasif']].map(([val, lbl]) => (
+            <button key={val} onClick={() => setFilterAktif(val)}
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors ${filterAktif === val ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Firma / Bölge / Şube */}
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { value: filterFirma, set: setFilterFirma, placeholder: 'Firma', opts: firmalar.map((f) => ({ id: f.id, ad: f.ad })) },
+          { value: filterBolge, set: (v) => { setFilterBolge(v); setFilterSube('') }, placeholder: 'Bölge', opts: bolgeler },
+          { value: filterSube, set: setFilterSube, placeholder: 'Şube', opts: subeSecenekleri },
+        ].map(({ value, set, placeholder, opts }) => (
+          <select key={placeholder} value={value} onChange={(e) => set(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600">
+            <option value="">{placeholder}</option>
+            {opts.map((o) => <option key={o.id} value={o.id}>{o.ad}</option>)}
+          </select>
+        ))}
+      </div>
+
       {/* Tür filtresi */}
       <div className="flex gap-1.5 flex-wrap">
         {[{ id: 'hepsi', label: 'Tümü' }, ...turler.map((t) => ({ id: t.ad, label: t.ad.charAt(0).toUpperCase() + t.ad.slice(1) }))].map((opt) => (
@@ -562,37 +625,45 @@ function AraclarSection({ agac, firmalar }) {
       ) : visible.length === 0 ? (
         <div className="text-center py-10 text-gray-300 text-sm">Bu türde araç bulunamadı.</div>
       ) : (
+        <AnimatePresence initial={false}>
         <div className="space-y-2">
           {visible.map((item) => (
-            <div key={item.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.18 }}
+              className={`rounded-xl border shadow-sm overflow-hidden ${item.aktif ? 'bg-white border-gray-100' : 'bg-red-50 border-red-200'}`}>
               <div className="flex items-center px-4 py-3 gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="font-mono font-bold text-blue-700 text-sm">{item.plaka}</p>
+                  <p className={`font-mono font-bold text-sm ${item.aktif ? 'text-blue-700' : 'text-red-400'}`}>{item.plaka}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {[item.marka, item.model_yili, item.firma?.ad, item.sube?.ad].filter(Boolean).join(' · ') || '\u00a0'}
                   </p>
                 </div>
                 <TurBadge ad={item.tur?.ad} />
-                <Badge aktif={item.aktif} />
                 <div className="flex gap-1">
                   <button
                     onClick={() => openEdit(item)}
-                    className="px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                    title="Düzenle"
+                    className="w-8 h-8 flex items-center justify-center text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
                   >
-                    Düzenle
+                    <Pencil size={15} />
                   </button>
                   <button
-                    onClick={() => handleToggle(item.id, item.aktif)}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${item.aktif ? 'text-gray-500 bg-gray-50 hover:bg-gray-100' : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
-                      }`}
+                    onClick={() => setBelgeDlg({ id: item.id, plaka: item.plaka })}
+                    title="Belgeler"
+                    className="w-8 h-8 flex items-center justify-center text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
                   >
-                    {item.aktif ? 'Pasif' : 'Aktif'}
+                    <FileText size={15} />
                   </button>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
+        </AnimatePresence>
       )}
 
       {modal && (
@@ -606,6 +677,12 @@ function AraclarSection({ agac, firmalar }) {
           <AracForm form={modal.form} />
         </Modal>
       )}
+
+      <AracBelgeleriDialog
+        arac={belgeDlg}
+        open={!!belgeDlg}
+        onClose={() => setBelgeDlg(null)}
+      />
     </section>
   )
 }
@@ -614,24 +691,18 @@ function AraclarSection({ agac, firmalar }) {
 const TABS = [
   { id: 'soforler', label: 'Şoförler', icon: '👤' },
   { id: 'araclar', label: 'Araçlar', icon: '🚛' },
-  { id: 'belgeler', label: 'Belgeler', icon: '📄' },
 ]
 
 export default function TanimlarPage() {
   const [tab, setTab] = useState('soforler')
-  const [agac, setAgac] = useState([])
-  const [firmalar, setFirmalar] = useState([])
-
-  useEffect(() => {
-    fetchLokasyonAgac().then(setAgac).catch(() => { })
-    fetchFirmalar().then(setFirmalar).catch(() => { })
-  }, [])
+  const { data: agac = [] }    = useQuery({ queryKey: ['lokasyon'], queryFn: fetchLokasyonAgac, staleTime: Infinity })
+  const { data: firmalar = [] } = useQuery({ queryKey: ['firmalar'], queryFn: fetchFirmalar,      staleTime: Infinity })
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-5">
       <div className="mb-5">
         <h1 className="text-xl font-bold text-gray-900">Tanımlar</h1>
-        <p className="text-xs text-gray-400 mt-0.5">Şoför, araç ve belge kayıtlarını yönetin</p>
+        <p className="text-xs text-gray-400 mt-0.5">Şoför ve araç kayıtlarını yönetin</p>
       </div>
 
       <div className="flex bg-gray-100 rounded-xl p-1 mb-5">
@@ -646,7 +717,6 @@ export default function TanimlarPage() {
 
       {tab === 'soforler' && <SoforlerSection agac={agac} />}
       {tab === 'araclar' && <AraclarSection agac={agac} firmalar={firmalar} />}
-      {tab === 'belgeler' && <BelgelerTab />}
     </div>
   )
 }

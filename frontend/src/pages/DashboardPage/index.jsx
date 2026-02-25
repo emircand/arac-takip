@@ -20,7 +20,7 @@ import {
   TableRow,
   TableFooter,
 } from '@mui/material'
-import RefreshIcon from '@mui/icons-material/Refresh'
+import { RefreshCw } from 'lucide-react'
 
 const PRESETS = [
   { label: 'Bugün', value: 'today' },
@@ -152,7 +152,7 @@ export default function DashboardPage() {
         </Box>
         <Button
           onClick={loadTrips}
-          startIcon={<RefreshIcon />}
+          startIcon={<RefreshCw size={14} />}
           size="small"
           variant="outlined"
           sx={{ textTransform: 'none', borderRadius: 2 }}

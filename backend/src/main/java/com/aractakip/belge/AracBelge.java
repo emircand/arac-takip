@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -29,22 +28,11 @@ public class AracBelge {
     @Column(name = "belge_turu", nullable = false)
     private String belgeTuru;
 
-    @Column(name = "baslangic_tarihi", nullable = false)
-    private LocalDate baslangicTarihi;
-
     @Column(name = "bitis_tarihi", nullable = false)
     private LocalDate bitisTarihi;
 
-    @Column(name = "police_no", length = 50)
-    private String policeNo;
-
-    @Column(length = 100)
-    private String kurum;
-
-    @Column(precision = 12, scale = 2)
-    private BigDecimal tutar;
-
-    private String notlar;
+    @Column(name = "cihaz_no", length = 50)
+    private String cihazNo;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;

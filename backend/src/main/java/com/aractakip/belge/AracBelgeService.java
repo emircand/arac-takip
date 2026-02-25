@@ -148,11 +148,7 @@ public class AracBelgeService {
     private void applyRequest(AracBelge belge, AracBelgeRequest req) {
         belge.setArac(aracRepository.getReferenceById(req.aracId()));
         belge.setBelgeTuru(req.belgeTuru());
-        belge.setBaslangicTarihi(req.baslangicTarihi());
         belge.setBitisTarihi(req.bitisTarihi());
-        belge.setPoliceNo(req.policeNo());
-        belge.setKurum(req.kurum());
-        belge.setTutar(req.tutar());
-        belge.setNotlar(req.notlar());
+        belge.setCihazNo(req.cihazNo());
     }
 }

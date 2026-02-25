@@ -1,135 +1,91 @@
 import { useState, useEffect } from 'react'
-import { createBelge, updateBelge, BELGE_TURLERI } from '../../services/aracBelgeler'
+import { useCreateBelge, useUpdateBelge } from '../../hooks/useBelgeler'
+import { BELGE_TURLERI } from '../../services/aracBelgeler'
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, TextField, Stack, Typography, Box, IconButton,
-  Alert, Grid,
+  Button, TextField, Stack, Typography, Box, IconButton, Alert,
 } from '@mui/material'
-import CloseIcon from '@mui/icons-material/Close'
+import { X } from 'lucide-react'
 
-const EMPTY = {
-  baslangicTarihi: '',
-  bitisTarihi: '',
-  policeNo: '',
-  kurum: '',
-  tutar: '',
-  notlar: '',
-}
+const EMPTY = { bitisTarihi: '', cihazNo: '' }
 
 export default function BelgeFormModal({ open, onClose, aracId, aracPlaka, belgeTuru, belge, onSaved }) {
   const [form, setForm] = useState(EMPTY)
-  const [saving, setSaving] = useState(false)
-  const [err, setErr] = useState(null)
+
+  const createMut = useCreateBelge(aracId)
+  const updateMut = useUpdateBelge(aracId)
+  const isPending  = createMut.isPending || updateMut.isPending
+  const err        = createMut.error?.message ?? updateMut.error?.message ?? null
 
   useEffect(() => {
     if (open) {
-      setErr(null)
-      if (belge) {
-        setForm({
-          baslangicTarihi: belge.baslangic_tarihi ?? belge.baslangicTarihi ?? '',
-          bitisTarihi:     belge.bitis_tarihi ?? belge.bitisTarihi ?? '',
-          policeNo:        belge.police_no ?? belge.policeNo ?? '',
-          kurum:           belge.kurum ?? '',
-          tutar:           belge.tutar?.toString() ?? '',
-          notlar:          belge.notlar ?? '',
-        })
-      } else {
-        setForm(EMPTY)
-      }
+      createMut.reset()
+      updateMut.reset()
+      setForm(belge ? {
+        bitisTarihi: belge.bitis_tarihi ?? belge.bitisTarihi ?? '',
+        cihazNo:     belge.cihaz_no ?? belge.cihazNo ?? '',
+      } : EMPTY)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [belge, open])
 
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }))
-
   const turLabel = BELGE_TURLERI.find(t => t.value === belgeTuru)?.label ?? belgeTuru
 
-  const handleSave = async () => {
-    setSaving(true)
-    setErr(null)
-    try {
-      const payload = {
-        arac_id:          aracId,
-        belge_turu:       belgeTuru,
-        baslangic_tarihi: form.baslangicTarihi || null,
-        bitis_tarihi:     form.bitisTarihi,
-        police_no:        form.policeNo || null,
-        kurum:            form.kurum || null,
-        tutar:            form.tutar ? Number(form.tutar) : null,
-        notlar:           form.notlar || null,
-      }
-      if (belge?.id) {
-        await updateBelge(belge.id, payload)
-      } else {
-        await createBelge(payload)
-      }
-      onSaved()
-    } catch (e) {
-      setErr(e.message ?? 'Kayıt başarısız')
-    } finally {
-      setSaving(false)
+  const handleSave = () => {
+    const payload = {
+      arac_id:      aracId,
+      belge_turu:   belgeTuru,
+      bitis_tarihi: form.bitisTarihi,
+      cihaz_no:     belgeTuru === 'arvato_gps' ? (form.cihazNo || null) : null,
+    }
+    if (belge?.id) {
+      updateMut.mutate({ id: belge.id, payload }, { onSuccess: onSaved })
+    } else {
+      createMut.mutate(payload, { onSuccess: onSaved })
     }
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
         <Box>
           <Typography variant="subtitle1" fontWeight={700}>
-            {turLabel} Belgesi {belge?.id ? 'Güncelle' : 'Ekle'}
+            {turLabel} {belge?.id ? 'Güncelle' : 'Ekle'}
           </Typography>
           {aracPlaka && (
             <Typography variant="caption" color="text.secondary">{aracPlaka}</Typography>
           )}
         </Box>
-        <IconButton size="small" onClick={onClose}><CloseIcon /></IconButton>
+        <IconButton size="small" onClick={onClose}><X size={16} /></IconButton>
       </DialogTitle>
 
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {err && <Alert severity="error">{err}</Alert>}
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth size="small" label="Başlangıç Tarihi" type="date"
-                value={form.baslangicTarihi} onChange={set('baslangicTarihi')}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth size="small" label="Bitiş Tarihi" type="date"
-                value={form.bitisTarihi} onChange={set('bitisTarihi')}
-                InputLabelProps={{ shrink: true }} required
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField fullWidth size="small" label="Poliçe / Belge No" value={form.policeNo} onChange={set('policeNo')} />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField fullWidth size="small" label="Kurum" value={form.kurum} onChange={set('kurum')} />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                fullWidth size="small" label="Tutar (₺)" type="number"
-                inputProps={{ step: '0.01', min: 0 }}
-                value={form.tutar} onChange={set('tutar')}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField fullWidth size="small" label="Notlar" value={form.notlar} onChange={set('notlar')} multiline rows={2} />
-            </Grid>
-          </Grid>
+          <TextField
+            fullWidth size="small" label="Bitiş Tarihi" type="date"
+            value={form.bitisTarihi} onChange={set('bitisTarihi')}
+            InputLabelProps={{ shrink: true }} required
+          />
+          {belgeTuru === 'arvato_gps' && (
+            <TextField
+              fullWidth size="small" label="Cihaz Numarası"
+              value={form.cihazNo} onChange={set('cihazNo')}
+              placeholder="Arvento cihaz no"
+            />
+          )}
         </Stack>
       </DialogContent>
 
       <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={onClose} color="inherit" disabled={saving}>İptal</Button>
+        <Button onClick={onClose} color="inherit" disabled={isPending}>İptal</Button>
         <Button
           variant="contained"
           onClick={handleSave}
-          disabled={saving || !form.bitisTarihi}
+          disabled={isPending || !form.bitisTarihi}
         >
-          {saving ? 'Kaydediliyor...' : (belge?.id ? 'Güncelle' : 'Ekle')}
+          {isPending ? 'Kaydediliyor...' : (belge?.id ? 'Güncelle' : 'Ekle')}
         </Button>
       </DialogActions>
     </Dialog>
