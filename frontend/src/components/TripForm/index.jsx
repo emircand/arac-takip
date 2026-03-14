@@ -43,12 +43,13 @@ function Section({ label }) {
   )
 }
 
-export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, onEditDone, onTripSaved }) {
+export default function TripForm({ cekiciler, dorseler, soforler, bolgeler = [], editingTrip, onEditDone, onTripSaved }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
   const [lastKm, setLastKm] = useState(null)
+  const [lastKmLoaded, setLastKmLoaded] = useState(false)
 
   const isEditing = !!editingTrip
 
@@ -80,8 +81,10 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
   useEffect(() => {
     if (isEditing || !form.cekici_id) {
       setLastKm(null)
+      setLastKmLoaded(false)
       return
     }
+    setLastKmLoaded(false)
     fetchLastKm(form.cekici_id)
       .then((data) => {
         const km = data?.donus_km ?? null
@@ -89,6 +92,7 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
         setForm((prev) => ({ ...prev, cikis_km: km != null ? String(km) : '' }))
       })
       .catch(() => setLastKm(null))
+      .finally(() => setLastKmLoaded(true))
   }, [form.cekici_id, isEditing])
 
   function handleChange(e) {
@@ -183,7 +187,12 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
         </div>
         <div>
           <Label text="Bölge" required />
-          <input type="text" name="bolge" value={form.bolge} onChange={handleChange} placeholder="Kadıköy" className={inputCls} required />
+          <select name="bolge" value={form.bolge} onChange={handleChange} className={inputCls} required>
+            <option value="">— Bölge seçin —</option>
+            {bolgeler.map((b) => (
+              <option key={b.id} value={b.ad}>{b.ad}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -252,39 +261,21 @@ export default function TripForm({ cekiciler, dorseler, soforler, editingTrip, o
             onChange={handleChange}
             placeholder="0"
             min="0"
-            disabled={!isEditing}
-            className={`${inputCls} ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
+            disabled={!isEditing && (!form.cekici_id || !lastKmLoaded || lastKm != null)}
+            className={`${inputCls} ${!isEditing && (!form.cekici_id || !lastKmLoaded || lastKm != null) ? 'opacity-60 cursor-not-allowed' : ''}`}
             required
           />
-          {!isEditing && lastKm != null && (
+          {!isEditing && lastKmLoaded && lastKm != null && (
             <p className="text-[11px] text-blue-500 mt-1 pl-1">Son sefer dönüş km'sinden otomatik dolduruldu</p>
+          )}
+          {!isEditing && lastKmLoaded && lastKm == null && form.cekici_id && (
+            <p className="text-[11px] text-amber-500 mt-1 pl-1">Önceki dönüş km bulunamadı — manuel girin</p>
           )}
         </div>
         <div>
           <Label text="Dönüş KM" required />
           <input type="number" name="donus_km" value={form.donus_km} onChange={handleChange} placeholder="0" min="0" className={inputCls} required />
         </div>
-      </div>
-
-      {/* ── EK BİLGİ ─────────────────────────────────── */}
-      <Section label="Ek Bilgi" />
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <Label text="Sefer Sırası" />
-          <input type="number" name="sfr_srs" value={form.sfr_srs} onChange={handleChange} min="1" className={inputCls} />
-        </div>
-        <div>
-          <Label text="Yakıt (litre)" />
-          <input type="number" name="yakit" value={form.yakit} onChange={handleChange} placeholder="—" step="0.01" min="0" className={inputCls} />
-        </div>
-        <div>
-          <Label text="Alınan Yakıt (lt)" />
-          <input type="number" name="alinan_yakit" value={form.alinan_yakit} onChange={handleChange} placeholder="—" step="0.01" min="0" className={inputCls} />
-        </div>
-      </div>
-      <div>
-        <Label text="Notlar" />
-        <textarea name="notlar" value={form.notlar} onChange={handleChange} placeholder="İsteğe bağlı not..." rows={2} className={`${inputCls} resize-none`} />
       </div>
 
       {/* Geri bildirimler */}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchCekiciler, fetchDorseler } from '../../services/araclar'
 import { fetchActiveSoforler } from '../../services/soforler'
 import { fetchRecentTrips, deleteTrip } from '../../services/trips'
+import { fetchBolgeler } from '../../services/lokasyon'
 import TripForm from '../../components/TripForm'
 import RecentTripsList from '../../components/RecentTripsList'
 
@@ -20,6 +21,7 @@ export default function FieldPage() {
   const [cekiciler, setCekiciler] = useState([])
   const [dorseler, setDorseler] = useState([])
   const [soforler, setSoforler] = useState([])
+  const [bolgeler, setBolgeler] = useState([])
   const [trips, setTrips] = useState([])
   const [loadingData, setLoadingData] = useState(true)
   const [loadingTrips, setLoadingTrips] = useState(true)
@@ -29,8 +31,8 @@ export default function FieldPage() {
   const formRef = useRef(null)
 
   useEffect(() => {
-    Promise.all([fetchCekiciler(true), fetchDorseler(true), fetchActiveSoforler()])
-      .then(([c, d, s]) => { setCekiciler(c); setDorseler(d); setSoforler(s) })
+    Promise.all([fetchCekiciler(true), fetchDorseler(true), fetchActiveSoforler(), fetchBolgeler()])
+      .then(([c, d, s, b]) => { setCekiciler(c); setDorseler(d); setSoforler(s); setBolgeler(b) })
       .catch((err) => setError(err.message))
       .finally(() => setLoadingData(false))
   }, [])
@@ -110,6 +112,7 @@ export default function FieldPage() {
             cekiciler={cekiciler}
             dorseler={dorseler}
             soforler={soforler}
+            bolgeler={bolgeler}
             editingTrip={editingTrip}
             onEditDone={handleEditDone}
             onTripSaved={refreshTrips}

@@ -296,6 +296,177 @@ const EMPTY_ARAC = {
   onceki_plaka: '', durumu: 'aktif', aktif: true,
 }
 
+const PLAKA_RE = /^\d{2}[A-Z]{1,3}\d{1,4}$/
+
+function validatePlaka(raw) {
+  const normalized = raw.replace(/\s+/g, '').toUpperCase()
+  return PLAKA_RE.test(normalized) ? null : 'Geçersiz format. Örnek: 06ABC1234'
+}
+
+// ─── AracForm ──────────────────────────────────────────────────────────────────
+// Üst scope'ta tanımlanmalı — içeride tanımlanırsa her render'da yeni component
+// tipi oluşur ve React formu unmount/remount eder (focus plakaya kaçar).
+function AracForm({ form, setField, setPlakaError, plakaError, turler, agac, firmalar }) {
+  const depolar = agac
+  const bolgeler = form.depo_id
+    ? (depolar.find((d) => String(d.id) === String(form.depo_id))?.bolgeler ?? [])
+    : []
+  const subeler = form.bolge_id
+    ? (bolgeler.find((b) => String(b.id) === String(form.bolge_id))?.subeler ?? [])
+    : []
+
+  return (
+    <div className="space-y-3">
+      <SectionDivider label="Zorunlu" />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label text="Plaka *" />
+          <input
+            value={form.plaka}
+            onChange={(e) => {
+              setField('plaka')({ target: { value: e.target.value.toUpperCase() } })
+              setPlakaError(null)
+            }}
+            placeholder="06ABC1234"
+            className={`${inputCls} ${plakaError ? 'ring-2 ring-red-400 border-red-300' : ''}`}
+            required
+          />
+          {plakaError && (
+            <p className="text-[11px] text-red-500 mt-1">{plakaError}</p>
+          )}
+        </div>
+        <div>
+          <Label text="Tür *" />
+          <select value={form.tur_id} onChange={setField('tur_id')} className={inputCls} required>
+            <option value="">— Tür —</option>
+            {turler.map((t) => (
+              <option key={t.id} value={t.id}>{t.ad.charAt(0).toUpperCase() + t.ad.slice(1)}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <SectionDivider label="Organizasyon" />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label text="Firma" />
+          <select value={form.firma_id} onChange={setField('firma_id')} className={inputCls}>
+            <option value="">— Firma —</option>
+            {firmalar.map((f) => (
+              <option key={f.id} value={f.id}>{f.ad}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label text="Arvento No" />
+          <input
+            type="text"
+            inputMode="numeric"
+            value={form.arvento_no}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, '')
+              setField('arvento_no')({ target: { value: val } })
+            }}
+            placeholder="123"
+            className={inputCls}
+          />
+        </div>
+
+        <div>
+          <Label text="Depo" />
+          <select value={form.depo_id} onChange={setField('depo_id')} className={inputCls}>
+            <option value="">— Depo —</option>
+            {depolar.map((d) => (
+              <option key={d.id} value={d.id}>{d.ad}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label text="Bölge" />
+          <select value={form.bolge_id} onChange={setField('bolge_id')} className={inputCls} disabled={!form.depo_id}>
+            <option value="">— Bölge —</option>
+            {bolgeler.map((b) => (
+              <option key={b.id} value={b.id}>{b.ad}</option>
+            ))}
+          </select>
+        </div>
+        <div className="col-span-2">
+          <Label text="Şube" />
+          <select value={form.sube_id} onChange={setField('sube_id')} className={inputCls} disabled={!form.bolge_id}>
+            <option value="">— Şube —</option>
+            {subeler.map((s) => (
+              <option key={s.id} value={s.id}>{s.ad}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <Label text="Önceki Plaka" />
+          <input value={form.onceki_plaka} onChange={setField('onceki_plaka')} placeholder="46 AA 000" className={inputCls} />
+        </div>
+        <div>
+          <Label text="Durum" />
+          <select value={form.durumu} onChange={setField('durumu')} className={inputCls}>
+            {DURUMLAR.map((d) => (
+              <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2 pt-1">
+          <input type="checkbox" id="arac-aktif" checked={!!form.aktif} onChange={setField('aktif')}
+            className="w-4 h-4 rounded accent-blue-600 cursor-pointer" />
+          <label htmlFor="arac-aktif" className="text-sm text-gray-700 cursor-pointer select-none">Aktif araç</label>
+        </div>
+      </div>
+
+      <SectionDivider label="Kimlik" />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label text="Marka" />
+          <input value={form.marka} onChange={setField('marka')} placeholder="MERCEDES" className={inputCls} />
+        </div>
+        <div>
+          <Label text="Model Yılı" />
+          <input type="number" value={form.model_yili} onChange={setField('model_yili')}
+            placeholder="2020" min="1990" max="2030" className={inputCls} />
+        </div>
+        <div>
+          <Label text="Cinsi" />
+          <input value={form.cinsi} onChange={setField('cinsi')} placeholder="Çekici / Frigorifik" className={inputCls} />
+        </div>
+        <div>
+          <Label text="Renk" />
+          <input value={form.renk} onChange={setField('renk')} placeholder="Beyaz" className={inputCls} />
+        </div>
+        <div className="col-span-2">
+          <Label text="Şase No" />
+          <input value={form.sase_no} onChange={setField('sase_no')} placeholder="WDB..." className={inputCls} />
+        </div>
+      </div>
+
+      <SectionDivider label="Teknik" />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label text="Motor Gücü (HP)" />
+          <input type="number" value={form.motor_gucu} onChange={setField('motor_gucu')} placeholder="420" min="0" className={inputCls} />
+        </div>
+        <div>
+          <Label text="Silindir Hacmi (cc)" />
+          <input type="number" value={form.silindir_hacmi} onChange={setField('silindir_hacmi')} placeholder="12000" min="0" className={inputCls} />
+        </div>
+        <div>
+          <Label text="Boş Ağırlık (kg)" />
+          <input type="number" value={form.bos_agirlik} onChange={setField('bos_agirlik')} placeholder="7500" min="0" className={inputCls} />
+        </div>
+        <div>
+          <Label text="Lastik Tipi" />
+          <input value={form.lastik_tipi} onChange={setField('lastik_tipi')} placeholder="315/80 R22.5" className={inputCls} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AraclarSection({ agac, firmalar }) {
   const [belgeDlg, setBelgeDlg] = useState(null)
   const [filterTur, setFilterTur] = useState('hepsi')
@@ -305,6 +476,7 @@ function AraclarSection({ agac, firmalar }) {
   const [filterSube, setFilterSube] = useState('')
   const [ara, setAra] = useState('')
   const [modal, setModal] = useState(null)
+  const [plakaError, setPlakaError] = useState(null)
 
   const { data: items = [], isLoading: loading, error: qError } = useAraclar()
   const { data: turler = [] } = useAracTurleri()
@@ -370,7 +542,10 @@ function AraclarSection({ agac, firmalar }) {
   }
 
   async function handleSave() {
-    if (!modal.form.plaka?.trim() || !modal.form.tur_id) return
+    if (!modal.form.tur_id) return
+    const err = validatePlaka(modal.form.plaka ?? '')
+    if (err) { setPlakaError(err); return }
+    setPlakaError(null)
     const payload = buildPayload(modal.form)
     if (modal.mode === 'add') {
       await createMut.mutateAsync(payload)
@@ -386,10 +561,12 @@ function AraclarSection({ agac, firmalar }) {
 
   function openAdd() {
     const defaultTurId = turler.length > 0 ? turler[0].id : ''
+    setPlakaError(null)
     setModal({ mode: 'add', form: { ...EMPTY_ARAC, tur_id: defaultTurId }, itemId: null })
   }
 
   function openEdit(item) {
+    setPlakaError(null)
     setModal({
       mode: 'edit',
       form: {
@@ -415,152 +592,6 @@ function AraclarSection({ agac, firmalar }) {
       },
       itemId: item.id,
     })
-  }
-
-  function AracForm({ form }) {
-    const depolar = agac
-    const bolgeler = form.depo_id
-      ? (depolar.find((d) => String(d.id) === String(form.depo_id))?.bolgeler ?? [])
-      : []
-    const subeler = form.bolge_id
-      ? (bolgeler.find((b) => String(b.id) === String(form.bolge_id))?.subeler ?? [])
-      : []
-
-    return (
-      <div className="space-y-3">
-        <SectionDivider label="Zorunlu" />
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label text="Plaka *" />
-            <input
-              value={form.plaka}
-              onChange={(e) => setField('plaka')({ target: { value: e.target.value.toUpperCase() } })}
-              placeholder="34 XX 0000"
-              className={inputCls}
-              required
-              autoFocus
-            />
-          </div>
-          <div>
-            <Label text="Tür *" />
-            <select value={form.tur_id} onChange={setField('tur_id')} className={inputCls} required>
-              <option value="">— Tür —</option>
-              {turler.map((t) => (
-                <option key={t.id} value={t.id}>{t.ad.charAt(0).toUpperCase() + t.ad.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <SectionDivider label="Organizasyon" />
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label text="Firma" />
-            <select value={form.firma_id} onChange={setField('firma_id')} className={inputCls}>
-              <option value="">— Firma —</option>
-              {firmalar.map((f) => (
-                <option key={f.id} value={f.id}>{f.ad}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label text="Arvento No" />
-            <input type="number" value={form.arvento_no} onChange={setField('arvento_no')} placeholder="123" min="0" className={inputCls} />
-          </div>
-
-          <div>
-            <Label text="Depo" />
-            <select value={form.depo_id} onChange={setField('depo_id')} className={inputCls}>
-              <option value="">— Depo —</option>
-              {depolar.map((d) => (
-                <option key={d.id} value={d.id}>{d.ad}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label text="Bölge" />
-            <select value={form.bolge_id} onChange={setField('bolge_id')} className={inputCls} disabled={!form.depo_id}>
-              <option value="">— Bölge —</option>
-              {bolgeler.map((b) => (
-                <option key={b.id} value={b.id}>{b.ad}</option>
-              ))}
-            </select>
-          </div>
-          <div className="col-span-2">
-            <Label text="Şube" />
-            <select value={form.sube_id} onChange={setField('sube_id')} className={inputCls} disabled={!form.bolge_id}>
-              <option value="">— Şube —</option>
-              {subeler.map((s) => (
-                <option key={s.id} value={s.id}>{s.ad}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <Label text="Önceki Plaka" />
-            <input value={form.onceki_plaka} onChange={setField('onceki_plaka')} placeholder="46 AA 000" className={inputCls} />
-          </div>
-          <div>
-            <Label text="Durum" />
-            <select value={form.durumu} onChange={setField('durumu')} className={inputCls}>
-              {DURUMLAR.map((d) => (
-                <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 pt-1">
-            <input type="checkbox" id="arac-aktif" checked={!!form.aktif} onChange={setField('aktif')}
-              className="w-4 h-4 rounded accent-blue-600 cursor-pointer" />
-            <label htmlFor="arac-aktif" className="text-sm text-gray-700 cursor-pointer select-none">Aktif araç</label>
-          </div>
-        </div>
-
-        <SectionDivider label="Kimlik" />
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label text="Marka" />
-            <input value={form.marka} onChange={setField('marka')} placeholder="MERCEDES" className={inputCls} />
-          </div>
-          <div>
-            <Label text="Model Yılı" />
-            <input type="number" value={form.model_yili} onChange={setField('model_yili')}
-              placeholder="2020" min="1990" max="2030" className={inputCls} />
-          </div>
-          <div>
-            <Label text="Cinsi" />
-            <input value={form.cinsi} onChange={setField('cinsi')} placeholder="Çekici / Frigorifik" className={inputCls} />
-          </div>
-          <div>
-            <Label text="Renk" />
-            <input value={form.renk} onChange={setField('renk')} placeholder="Beyaz" className={inputCls} />
-          </div>
-          <div className="col-span-2">
-            <Label text="Şase No" />
-            <input value={form.sase_no} onChange={setField('sase_no')} placeholder="WDB..." className={inputCls} />
-          </div>
-        </div>
-
-        <SectionDivider label="Teknik" />
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label text="Motor Gücü (HP)" />
-            <input type="number" value={form.motor_gucu} onChange={setField('motor_gucu')} placeholder="420" min="0" className={inputCls} />
-          </div>
-          <div>
-            <Label text="Silindir Hacmi (cc)" />
-            <input type="number" value={form.silindir_hacmi} onChange={setField('silindir_hacmi')} placeholder="12000" min="0" className={inputCls} />
-          </div>
-          <div>
-            <Label text="Boş Ağırlık (kg)" />
-            <input type="number" value={form.bos_agirlik} onChange={setField('bos_agirlik')} placeholder="7500" min="0" className={inputCls} />
-          </div>
-          <div>
-            <Label text="Lastik Tipi" />
-            <input value={form.lastik_tipi} onChange={setField('lastik_tipi')} placeholder="315/80 R22.5" className={inputCls} />
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -669,12 +700,20 @@ function AraclarSection({ agac, firmalar }) {
       {modal && (
         <Modal
           title={modal.mode === 'add' ? 'Yeni Araç' : 'Araç Düzenle'}
-          onClose={() => setModal(null)}
+          onClose={() => { setModal(null); setPlakaError(null) }}
           onSave={handleSave}
           saving={saving}
           saveLabel={modal.mode === 'add' ? 'Ekle' : 'Kaydet'}
         >
-          <AracForm form={modal.form} />
+          <AracForm
+            form={modal.form}
+            setField={setField}
+            setPlakaError={setPlakaError}
+            plakaError={plakaError}
+            turler={turler}
+            agac={agac}
+            firmalar={firmalar}
+          />
         </Modal>
       )}
 

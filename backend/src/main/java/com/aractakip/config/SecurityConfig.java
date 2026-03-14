@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -43,8 +44,29 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Sadece yönetici endpoint'leri
                         .requestMatchers("/api/dashboard/**").hasRole("YONETICI")
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/yakit/**").hasRole("YONETICI")
+                        .requestMatchers("/api/stok/**").hasRole("YONETICI")
+                        .requestMatchers("/api/arac-belgeler/**").hasRole("YONETICI")
+                        .requestMatchers("/api/firmalar/**").hasRole("YONETICI")
+                        .requestMatchers("/api/depolar/**").hasRole("YONETICI")
+                        .requestMatchers(HttpMethod.GET, "/api/bolgeler/**").authenticated()
+                        .requestMatchers("/api/bolgeler/**").hasRole("YONETICI")
+                        .requestMatchers("/api/subeler/**").hasRole("YONETICI")
+                        .requestMatchers("/api/lokasyonlar/**").hasRole("YONETICI")
+                        // Araç/şoför: GET her iki rol, mutasyon sadece yönetici
+                        .requestMatchers(HttpMethod.GET, "/api/araclar/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/soforler/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/arac-turleri/**").authenticated()
+                        .requestMatchers("/api/araclar/**").hasRole("YONETICI")
+                        .requestMatchers("/api/soforler/**").hasRole("YONETICI")
+                        .requestMatchers("/api/arac-turleri/**").hasRole("YONETICI")
+                        // Her iki rol
+                        .requestMatchers("/api/seferler/**").authenticated()
+                        .requestMatchers("/api/arizalar/**").authenticated()
+                        // Güvenli varsayılan: geri kalan her şey sadece yönetici
+                        .anyRequest().hasRole("YONETICI")
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, e) -> {

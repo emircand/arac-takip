@@ -1,177 +1,83 @@
-# Araç Takip
+# Araç Takip Sistemi (Fleet Management)
 
-Çöp toplama filolarını takip etmek için geliştirilmiş web uygulaması. Saha ekibi mobil üzerinden sefer verisi girer; yöneticiler anlık dashboard üzerinden bölge, çekici ve şoför bazlı performansı izler.
+Atık toplama şirketleri için geliştirilmiş, kapsamlı araç filo yönetim sistemi. Sefer, yakıt tüketimi, araç belgeleri, arıza takibi ve depo/stok yönetimini tek bir platformda birleştirir.
 
-## Özellikler
+## 🚀 Teknolojiler (Tech Stack)
 
-- **Authentication** — JWT tabanlı, iki rol: `saha` ve `yonetici`
-- **Saha Ekranı** — Çekici + dorse + şoför kombinasyonuyla sefer girişi. Son 20 sefer listesi, düzenleme ve silme. Mobil öncelikli tasarım.
-- **Tanımlar** — Şoför, çekici ve dorse kayıtlarını yönet; aktif/pasif durumu değiştir.
-- **Dashboard** (yönetici) — Bugünün özet kartları + Bugün/Bu Hafta/Bu Ay dönem filtresiyle bölge, çekici ve şoför bazlı tablolar.
+### Frontend
+- **Framework:** React 19
+- **Build Tool:** Vite 7
+- **Styling:** Tailwind CSS 4 + Material UI
+- **State/Data Management:** React Query (`@tanstack/react-query`)
 
-## Teknoloji
+### Backend
+- **Framework:** Spring Boot 3.4.3
+- **Language:** Java 21
+- **Security:** Spring Security + JWT Auth
+- **Database:** PostgreSQL 17 (Hibernate ile)
 
-**Frontend**
-- [React 19](https://react.dev) + [Vite 7](https://vite.dev)
-- [Tailwind CSS v4](https://tailwindcss.com)
+---
 
-**Backend**
-- [Spring Boot 3.4](https://spring.io/projects/spring-boot) (Java 21)
-- Spring Security 6 — stateless, JWT
-- Spring Data JPA + Hibernate 6
-- PostgreSQL via [Supabase](https://supabase.com)
+## 🛠️ Kurulum ve Çalıştırma (Getting Started)
 
-## Kurulum
-
-### 1. Repoyu klonlayın
-
+### 1. Veritabanı Hazırlığı (Database Setup)
+PostgreSQL veritabanını oluşturun ve gerekli migrasyonları uygulayın:
 ```bash
-git clone https://github.com/kullanici/arac-takip.git
-cd arac-takip
+# PostgreSQL üzerinde 'aractakip' adında bir veritabanı ve kullanıcı oluşturun
+psql -U aractakip -d aractakip -f sql/migration.sql
 ```
+*(Not: Backend tarafında Hibernate 'validate' modunda çalışır. Şema değişiklikleri manuel SQL üzerinden yapılmalıdır.)*
 
-### 2. Frontend
-
-```bash
-cd frontend
-npm install
-```
-
-`frontend/.env` dosyasını oluşturun:
-
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
-
-> Supabase Dashboard → Settings → API → **anon / public** key
-
-```bash
-npm run dev
-# http://localhost:5173
-```
-
-### 3. Backend
-
-`backend/.env` dosyasını oluşturun:
-
-```env
-DATABASE_JDBC_URL=jdbc:postgresql://aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
-DATABASE_POOLER_USER=postgres.<project-ref>
-DATABASE_PASSWORD=your-db-password
-JWT_SECRET=your-base64-secret
-SUPABASE_ANON_KEY=your-anon-key
-```
-
-> Supabase Dashboard → Settings → Database → **Connection pooling** (Transaction mode, port 6543 veya 5432)
-
+### 2. Backend Çalıştırma (Running the Backend)
 ```bash
 cd backend
-set -a && source .env && set +a
-mvn spring-boot:run
-# http://localhost:8080
+# Uygulamayı başlat
+./mvnw spring-boot:run
+
+# Testleri çalıştırmak için
+./mvnw test
 ```
+*Backend varsayılan olarak `http://localhost:8080` portunda çalışacaktır.*
 
-### 4. Supabase tablolarını oluşturun
+### 3. Frontend Çalıştırma (Running the Frontend)
+```bash
+cd frontend
+# Bağımlılıkları yükle
+npm install
 
-Supabase SQL Editor'da aşağıdaki sorguları çalıştırın:
-
-```sql
--- Kullanıcı profilleri (auth.users ile 1:1)
-create table profiller (
-  id uuid primary key references auth.users(id) on delete cascade,
-  ad_soyad text not null,
-  rol text not null check (rol in ('saha', 'yonetici'))
-);
-
--- Şoförler
-create table soforler (
-  id uuid primary key default gen_random_uuid(),
-  ad_soyad text not null,
-  telefon text,
-  aktif boolean default true
-);
-
--- Çekiciler
-create table cekiciler (
-  id uuid primary key default gen_random_uuid(),
-  plaka text not null unique,
-  arac_tipi text default 'Çekici',
-  aktif boolean default true
-);
-
--- Dorseler
-create table dorseler (
-  id uuid primary key default gen_random_uuid(),
-  plaka text not null unique,
-  aktif boolean default true
-);
-
--- Seferler
-create table seferler (
-  id uuid primary key default gen_random_uuid(),
-  girdi_yapan uuid references auth.users(id),
-  tarih date not null,
-  bolge text,
-  cekici_id uuid references cekiciler(id),
-  dorse_id uuid references dorseler(id),
-  sofor_id uuid references soforler(id),
-  cikis_saati time,
-  donus_saati time,
-  sfr_suresi interval generated always as (donus_saati - cikis_saati) stored,
-  tonaj numeric(10,3),
-  cikis_km integer,
-  donus_km integer,
-  km integer generated always as (donus_km - cikis_km) stored,
-  sfr_srs integer,
-  sfr integer default 1,
-  yakit numeric(8,2),
-  notlar text
-);
+# Geliştirme sunucusunu başlat
+npm run dev
 ```
+*Frontend varsayılan olarak `http://localhost:5173` portunda çalışacaktır.*
 
-## Sayfa Erişimi
+---
 
-| Sayfa | saha | yonetici |
-|-------|:----:|:--------:|
-| `/login` | ✓ | ✓ |
-| `/saha` | ✓ | ✓ |
-| `/tanimlar` | ✓ | ✓ |
-| `/dashboard` | — | ✓ |
-| `/kullanicilar` | — | ✓ |
+## 📁 Proje Yapısı (Project Structure)
 
-## Proje Yapısı
-
-```
+```text
 arac-takip/
-├── frontend/
+├── frontend/                 # React UI uygulaması
 │   └── src/
-│       ├── contexts/
-│       │   └── AuthContext.jsx          # Session + profil (rol dahil)
-│       ├── lib/
-│       │   └── supabaseClient.js        # Supabase bağlantısı
-│       ├── services/                    # Supabase sorguları (sefer, şoför, çekici, dorse)
-│       ├── components/
-│       │   ├── NavBar/                  # Rol bazlı navigasyon
-│       │   ├── ProtectedRoute/          # Auth + rol yönlendirme
-│       │   ├── TripForm/                # Sefer giriş formu
-│       │   ├── RecentTripsList/         # Son 20 sefer listesi
-│       │   └── SummaryCards/            # Dashboard özet kartları
-│       └── pages/
-│           ├── LoginPage/
-│           ├── FieldPage/               # /saha
-│           ├── TanimlarPage/            # /tanimlar
-│           ├── DashboardPage/           # /dashboard
-│           └── KullanicilarPage/        # /kullanicilar
-└── backend/
-    └── src/main/java/com/aractakip/
-        ├── auth/                        # JWT üretimi, filtre, Supabase auth entegrasyonu
-        ├── config/                      # Security, CORS
-        ├── common/                      # ApiResponse, GlobalExceptionHandler
-        ├── sefer/                       # Sefer entity, repo, service, controller
-        ├── sofor/                       # Şoför entity, repo, service, controller
-        ├── cekici/                      # Çekici entity, repo, service, controller
-        ├── dorse/                       # Dorse entity, repo, service, controller
-        ├── profil/                      # Profil entity, repo
-        └── dashboard/                   # Özet sorgular (bölge, çekici, şoför bazlı)
+│       ├── components/       # Tekrar kullanılabilir UI bileşenleri
+│       ├── pages/            # Sayfalar
+│       └── services/         # API istekleri (apiClient.js)
+│
+├── backend/                  # Spring Boot REST API
+│   └── src/main/java/com/aractakip/
+│       ├── config/           # Security, CORS vb. ayarlar
+│       ├── common/           # Ortak sınıflar (ApiResponse vb.)
+│       └── {domain}/         # Modüller (arac, sefer, sofor vb.)
+│
+├── docs/                     # Proje dökümantasyonu, şemalar, planlar
+└── sql/                      # Veritabanı SQL dosyaları (migration vb.)
 ```
+
+## 📚 Dokümantasyon
+
+Daha fazla detay için `docs/` klasörüne göz atın:
+- `SCHEMA.md` & `db-schema.md`: Veritabanı tabloları ve ilişkileri.
+- `API.md`: Backend API referansı.
+- `MODULES.md`: Modül geliştirme durumları ve biten/planlanan modüllerin yol haritası.
+
+## 🔑 Kimlik Doğrulama (Auth)
+Tüm korumalı API uç noktaları için JWT tabanlı kimlik doğrulama gereklidir. Başarılı girişte alınan token `localStorage` üzerinde `filo_token` adıyla saklanır. Müşteri rollerine (`saha`, `yonetici`) göre farklı yetkilendirmeler uygulanır.

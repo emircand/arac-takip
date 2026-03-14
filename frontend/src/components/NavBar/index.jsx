@@ -6,9 +6,11 @@ export default function NavBar() {
   const isYonetici = profile?.rol === 'yonetici'
 
   const navItems = [
-    { to: '/saha', label: 'Saha', icon: '🚛' },
-    { to: '/tanimlar', label: 'Tanımlar', icon: '📋' },
+    { to: '/saha',     label: 'Saha',     icon: '🚛' },
+    { to: '/arizalar', label: 'Arızalar', icon: '🔧' },
     ...(isYonetici ? [
+      { to: '/tanimlar',  label: 'Tanımlar',  icon: '📋' },
+      { to: '/stok',      label: 'Stok',      icon: '📦' },
       { to: '/yakit',     label: 'Yakıt',     icon: '⛽' },
       { to: '/dashboard', label: 'Dashboard', icon: '📊' },
     ] : []),

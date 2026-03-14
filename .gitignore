@@ -36,3 +36,5 @@ backend/target/
 
 docs/
 infra/
+
+*.xlsx
