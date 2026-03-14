@@ -41,11 +41,10 @@ public class AracBelgeController {
     public ApiResponse<List<YaklasanBelgeDto>> getYaklasan(
             @RequestParam(defaultValue = "60") int gun,
             @RequestParam(name = "belge_turu", required = false) String belgeTuru,
-            @RequestParam(name = "sube_id", required = false) Integer subeId,
             @RequestParam(name = "bolge_id", required = false) Integer bolgeId,
             @RequestParam(defaultValue = "bitis_tarihi_asc") String siralama
     ) {
-        return ApiResponse.ok(belgeService.getYaklasan(gun, belgeTuru, subeId, bolgeId, siralama));
+        return ApiResponse.ok(belgeService.getYaklasan(gun, belgeTuru, bolgeId, siralama));
     }
 
     @GetMapping("/api/arac-belgeler/dashboard/sayim")

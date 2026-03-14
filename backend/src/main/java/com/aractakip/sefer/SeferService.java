@@ -1,6 +1,7 @@
 package com.aractakip.sefer;
 
 import com.aractakip.arac.AracRepository;
+import com.aractakip.lokasyon.SubeRepository;
 import com.aractakip.sefer.dto.SeferDto;
 import com.aractakip.sefer.dto.SeferRequest;
 import com.aractakip.sofor.SoforRepository;
@@ -23,6 +24,7 @@ public class SeferService {
     private final SeferRepository seferRepository;
     private final AracRepository aracRepository;
     private final SoforRepository soforRepository;
+    private final SubeRepository subeRepository;
 
     public List<SeferDto> getAll(LocalDate start, LocalDate end, String bolge,
                                  UUID cekiciId, UUID soforId) {
@@ -90,6 +92,7 @@ public class SeferService {
     private void applyRequest(Sefer sefer, SeferRequest req) {
         sefer.setTarih(req.tarih());
         sefer.setBolge(req.bolge());
+        sefer.setSube(req.subeId() != null ? subeRepository.getReferenceById(req.subeId()) : null);
         if (req.cekiciId() != null) {
             sefer.setCekici(aracRepository.getReferenceById(req.cekiciId()));
         }

@@ -43,6 +43,7 @@ public class YakitDto {
             String istasyon,
             String istasyonIli,
             String uttsNo,
-            boolean anomali
+            boolean anomali,
+            String anomaliTipi
     ) {}
 }

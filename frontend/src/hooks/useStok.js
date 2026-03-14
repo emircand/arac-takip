@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchStokList, createStok, updateStok, stokGiris } from '../services/stokService'
+import { fetchStokList, createStok, updateStok, stokGiris, fetchKritikStok } from '../services/stokService'
 
 const STOK_KEY = 'stok'
 
@@ -34,5 +34,13 @@ export function useStokGiris() {
   return useMutation({
     mutationFn: ({ id, data }) => stokGiris(id, data),
     onSuccess: invalidate,
+  })
+}
+
+export function useKritikStok(esik = 5) {
+  return useQuery({
+    queryKey: [STOK_KEY, 'kritik', esik],
+    queryFn: () => fetchKritikStok(esik),
+    staleTime: 60_000,
   })
 }

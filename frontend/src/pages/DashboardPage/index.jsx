@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { fetchTripsForDashboard, fetchTodayStats } from '../../services/trips'
 import SummaryCards from '../../components/SummaryCards'
 import DashboardBelgeUyari from '../../components/DashboardBelgeUyari'
+import DashboardKritikStok from '../../components/DashboardKritikStok'
+import ExportButton from '../../components/ExportButton'
 import {
   Container,
   Box,
@@ -179,6 +181,9 @@ export default function DashboardPage() {
       {/* Belge Uyarıları */}
       <DashboardBelgeUyari />
 
+      {/* Kritik Stok */}
+      <DashboardKritikStok />
+
       {/* Dönem filtresi + tablolar */}
       <Paper elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
         {/* Toolbar */}
@@ -218,6 +223,12 @@ export default function DashboardPage() {
               </ToggleButton>
             ))}
           </ToggleButtonGroup>
+
+          <ExportButton
+            rapor="seferler"
+            label="Seferler"
+            withDateRange
+          />
         </Box>
 
         {/* Tablolar */}

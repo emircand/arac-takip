@@ -1,7 +1,7 @@
 package com.aractakip.sofor;
 
 import com.aractakip.common.AktifRequest;
-import com.aractakip.lokasyon.SubeRepository;
+import com.aractakip.lokasyon.BolgeRepository;
 import com.aractakip.sofor.dto.SoforRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,7 +15,7 @@ import java.util.UUID;
 public class SoforService {
 
     private final SoforRepository soforRepository;
-    private final SubeRepository subeRepository;
+    private final BolgeRepository bolgeRepository;
 
     public List<Sofor> getAll(Boolean aktif) {
         if (aktif != null) {
@@ -30,7 +30,7 @@ public class SoforService {
         sofor.setAdSoyad(req.adSoyad());
         sofor.setTelefon(req.telefon());
         sofor.setAktif(req.aktif() != null ? req.aktif() : true);
-        applySube(sofor, req);
+        applyBolge(sofor, req);
         return soforRepository.save(sofor);
     }
 
@@ -40,12 +40,12 @@ public class SoforService {
         sofor.setAdSoyad(req.adSoyad());
         sofor.setTelefon(req.telefon());
         if (req.aktif() != null) sofor.setAktif(req.aktif());
-        applySube(sofor, req);
+        applyBolge(sofor, req);
         return soforRepository.save(sofor);
     }
 
-    private void applySube(Sofor sofor, SoforRequest req) {
-        sofor.setSube(req.subeId() != null ? subeRepository.getReferenceById(req.subeId()) : null);
+    private void applyBolge(Sofor sofor, SoforRequest req) {
+        sofor.setBolge(req.bolgeId() != null ? bolgeRepository.getReferenceById(req.bolgeId()) : null);
     }
 
     public Sofor setAktif(UUID id, AktifRequest req) {

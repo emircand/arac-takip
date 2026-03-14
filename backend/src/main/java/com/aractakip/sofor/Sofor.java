@@ -1,6 +1,6 @@
 package com.aractakip.sofor;
 
-import com.aractakip.lokasyon.Sube;
+import com.aractakip.lokasyon.Bolge;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,6 +26,6 @@ public class Sofor {
     private Boolean aktif;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "sube_id")
-    private Sube sube;
+    @JoinColumn(name = "bolge_id")
+    private Bolge bolge;
 }

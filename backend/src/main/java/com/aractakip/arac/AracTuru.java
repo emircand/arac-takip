@@ -36,4 +36,7 @@ public class AracTuru {
 
     @Column(name = "dorse_alabilir")
     private Boolean dorseAlabilir;
+
+    @Column(name = "tank_kapasitesi_lt")
+    private Integer tankKapasitesiLt;
 }

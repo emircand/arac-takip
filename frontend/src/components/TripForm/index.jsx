@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createTrip, updateTrip, fetchLastKm } from '../../services/trips'
+import { fetchSubeler } from '../../services/lokasyon'
 import SearchableSelect from '../SearchableSelect'
 
 const today = () => new Date().toISOString().split('T')[0]
@@ -7,6 +8,7 @@ const today = () => new Date().toISOString().split('T')[0]
 const EMPTY_FORM = {
   tarih: today(),
   bolge: '',
+  sube_id: '',
   cekici_id: '',
   dorse_id: '',
   sofor_id: '',
@@ -51,13 +53,43 @@ export default function TripForm({ cekiciler, dorseler, soforler, bolgeler = [],
   const [lastKm, setLastKm] = useState(null)
   const [lastKmLoaded, setLastKmLoaded] = useState(false)
 
+  // İl/İlçe filtre state'leri
+  const [selectedBolgeId, setSelectedBolgeId] = useState('')
+  const [ilceler, setIlceler] = useState([])
+
   const isEditing = !!editingTrip
 
+  // İl değişince ilçeleri yükle
+  useEffect(() => {
+    if (!selectedBolgeId) { setIlceler([]); return }
+    fetchSubeler(selectedBolgeId)
+      .then(setIlceler)
+      .catch(() => setIlceler([]))
+  }, [selectedBolgeId])
+
+  // Filtreli listeler — arac/sofor.bolge.id üzerinden filtrele
+  const filteredCekiciler = useMemo(() => {
+    if (!selectedBolgeId) return cekiciler
+    return cekiciler.filter(a => a.bolge?.id === selectedBolgeId)
+  }, [cekiciler, selectedBolgeId])
+
+  const filteredDorseler = useMemo(() => {
+    if (!selectedBolgeId) return dorseler
+    return dorseler.filter(a => a.bolge?.id === selectedBolgeId)
+  }, [dorseler, selectedBolgeId])
+
+  const filteredSoforler = useMemo(() => {
+    if (!selectedBolgeId) return soforler
+    return soforler.filter(s => s.bolge?.id === selectedBolgeId)
+  }, [soforler, selectedBolgeId])
+
+  // Düzenleme modunda form doldur
   useEffect(() => {
     if (editingTrip) {
       setForm({
         tarih: editingTrip.tarih || today(),
         bolge: editingTrip.bolge || '',
+        sube_id: editingTrip.sube_id ?? '',
         cekici_id: editingTrip.cekici_id || '',
         dorse_id: editingTrip.dorse_id || '',
         sofor_id: editingTrip.sofor_id || '',
@@ -71,12 +103,15 @@ export default function TripForm({ cekiciler, dorseler, soforler, bolgeler = [],
         alinan_yakit: editingTrip.alinan_yakit?.toString() || '',
         notlar: editingTrip.notlar || '',
       })
+      const b = bolgeler.find(b => b.ad === editingTrip.bolge)
+      setSelectedBolgeId(b ? b.id : '')
       setError(null)
       setSuccess(false)
     } else {
       setForm(EMPTY_FORM)
+      setSelectedBolgeId('')
     }
-  }, [editingTrip])
+  }, [editingTrip, bolgeler])
 
   useEffect(() => {
     if (isEditing || !form.cekici_id) {
@@ -101,6 +136,23 @@ export default function TripForm({ cekiciler, dorseler, soforler, bolgeler = [],
     setSuccess(false)
   }
 
+  function handleIlChange(e) {
+    const bolgeId = e.target.value ? Number(e.target.value) : ''
+    const bolge = bolgeler.find(b => b.id === bolgeId)
+    setSelectedBolgeId(bolgeId)
+    setForm(prev => ({
+      ...prev,
+      bolge: bolge ? bolge.ad : '',
+      sube_id: '',
+      // Seçili araç/şoför bu ile ait değilse temizle
+      cekici_id: cekiciler.find(a => a.id === prev.cekici_id && a.bolge?.id === bolgeId) ? prev.cekici_id : '',
+      dorse_id:  dorseler.find(a => a.id === prev.dorse_id   && a.bolge?.id === bolgeId) ? prev.dorse_id  : '',
+      sofor_id:  soforler.find(s => s.id === prev.sofor_id   && s.bolge?.id === bolgeId) ? prev.sofor_id  : '',
+    }))
+    setError(null)
+    setSuccess(false)
+  }
+
   function validate() {
     const { tarih, bolge, cekici_id, dorse_id, sofor_id, cikis_saati, donus_saati, tonaj, cikis_km, donus_km } = form
     if (!tarih || !bolge || !cekici_id || !dorse_id || !sofor_id || !cikis_saati || !donus_saati || !tonaj || !cikis_km || !donus_km) {
@@ -119,6 +171,7 @@ export default function TripForm({ cekiciler, dorseler, soforler, bolgeler = [],
     const payload = {
       tarih: form.tarih,
       bolge: form.bolge,
+      sube_id: form.sube_id ? Number(form.sube_id) : null,
       cekici_id: form.cekici_id,
       dorse_id: form.dorse_id,
       sofor_id: form.sofor_id,
@@ -141,16 +194,16 @@ export default function TripForm({ cekiciler, dorseler, soforler, bolgeler = [],
       } else {
         await createTrip(payload)
         setSuccess(true)
-        // Form sıfırla, cekici_id koru — useEffect cikis_km'i otomatik güncelleyecek
         const savedCekiciId = form.cekici_id
         setForm((prev) => ({
           ...EMPTY_FORM,
           tarih: prev.tarih,
+          bolge: prev.bolge,
+          sube_id: prev.sube_id,
           cekici_id: savedCekiciId,
           dorse_id: prev.dorse_id,
           sofor_id: prev.sofor_id,
         }))
-        // useEffect cekici_id değişmediğinde tetiklenmez → manuel refetch
         fetchLastKm(savedCekiciId)
           .then((data) => {
             const km = data?.donus_km ?? null
@@ -180,17 +233,41 @@ export default function TripForm({ cekiciler, dorseler, soforler, bolgeler = [],
 
       {/* ── GÜZERGAH ─────────────────────────────────── */}
       <Section label="Güzergah" />
+
+      {/* Tarih */}
+      <div>
+        <Label text="Tarih" required />
+        <input type="date" name="tarih" value={form.tarih} onChange={handleChange} className={inputCls} required />
+      </div>
+
+      {/* İl + İlçe */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label text="Tarih" required />
-          <input type="date" name="tarih" value={form.tarih} onChange={handleChange} className={inputCls} required />
+          <Label text="İl" required />
+          <select
+            value={selectedBolgeId}
+            onChange={handleIlChange}
+            className={inputCls}
+            required
+          >
+            <option value="">— İl seçin —</option>
+            {bolgeler.map((b) => (
+              <option key={b.id} value={b.id}>{b.ad}</option>
+            ))}
+          </select>
         </div>
         <div>
-          <Label text="Bölge" required />
-          <select name="bolge" value={form.bolge} onChange={handleChange} className={inputCls} required>
-            <option value="">— Bölge seçin —</option>
-            {bolgeler.map((b) => (
-              <option key={b.id} value={b.ad}>{b.ad}</option>
+          <Label text="İlçe" />
+          <select
+            name="sube_id"
+            value={form.sube_id}
+            onChange={handleChange}
+            className={inputCls}
+            disabled={!selectedBolgeId}
+          >
+            <option value="">— Tümü —</option>
+            {ilceler.map((s) => (
+              <option key={s.id} value={s.id}>{s.ad}</option>
             ))}
           </select>
         </div>
@@ -198,38 +275,59 @@ export default function TripForm({ cekiciler, dorseler, soforler, bolgeler = [],
 
       {/* ── ARAÇ ─────────────────────────────────────── */}
       <Section label="Araç" />
+
+      {!selectedBolgeId && (
+        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          Araç ve şoför listesi için önce il seçin.
+        </p>
+      )}
+
       <div>
         <Label text="Çekici" required />
         <SearchableSelect
           name="cekici_id"
           value={form.cekici_id}
           onChange={handleChange}
-          options={cekiciler.map((c) => ({ id: c.id, label: c.plaka }))}
-          placeholder="— Çekici seçin —"
+          options={filteredCekiciler.map((c) => ({ id: c.id, label: c.plaka }))}
+          placeholder={selectedBolgeId ? '— Çekici seçin —' : '— Önce il seçin —'}
           required
+          disabled={!selectedBolgeId}
         />
+        {selectedBolgeId && filteredCekiciler.length === 0 && (
+          <p className="text-xs text-gray-400 mt-1 pl-1">Bu ilde aktif çekici yok.</p>
+        )}
       </div>
+
       <div>
         <Label text="Dorse" required />
         <SearchableSelect
           name="dorse_id"
           value={form.dorse_id}
           onChange={handleChange}
-          options={dorseler.map((d) => ({ id: d.id, label: d.plaka }))}
-          placeholder="— Dorse seçin —"
+          options={filteredDorseler.map((d) => ({ id: d.id, label: d.plaka }))}
+          placeholder={selectedBolgeId ? '— Dorse seçin —' : '— Önce il seçin —'}
           required
+          disabled={!selectedBolgeId}
         />
+        {selectedBolgeId && filteredDorseler.length === 0 && (
+          <p className="text-xs text-gray-400 mt-1 pl-1">Bu ilde aktif dorse yok.</p>
+        )}
       </div>
+
       <div>
         <Label text="Şoför" required />
         <SearchableSelect
           name="sofor_id"
           value={form.sofor_id}
           onChange={handleChange}
-          options={soforler.map((s) => ({ id: s.id, label: s.ad_soyad }))}
-          placeholder="— Şoför seçin —"
+          options={filteredSoforler.map((s) => ({ id: s.id, label: s.ad_soyad }))}
+          placeholder={selectedBolgeId ? '— Şoför seçin —' : '— Önce il seçin —'}
           required
+          disabled={!selectedBolgeId}
         />
+        {selectedBolgeId && filteredSoforler.length === 0 && (
+          <p className="text-xs text-gray-400 mt-1 pl-1">Bu ilde aktif şoför yok.</p>
+        )}
       </div>
 
       {/* ── SAAT ─────────────────────────────────────── */}

@@ -7,3 +7,8 @@ export function fetchLokasyonAgac() {
 export function fetchBolgeler() {
   return api.get('/api/bolgeler')
 }
+
+export function fetchSubeler(bolgeId) {
+  const qs = bolgeId != null ? `?bolge_id=${bolgeId}` : ''
+  return api.get(`/api/subeler${qs}`)
+}

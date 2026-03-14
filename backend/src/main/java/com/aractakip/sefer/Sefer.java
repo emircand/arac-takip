@@ -1,6 +1,7 @@
 package com.aractakip.sefer;
 
 import com.aractakip.arac.Arac;
+import com.aractakip.lokasyon.Sube;
 import com.aractakip.sofor.Sofor;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -28,6 +29,10 @@ public class Sefer {
     private LocalDate tarih;
 
     private String bolge;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "sube_id")
+    private Sube sube;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cekici_id")

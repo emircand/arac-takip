@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,6 +17,12 @@ import java.util.UUID;
 public class StokController {
 
     private final StokService stokService;
+
+    @GetMapping("/api/stok/kritik")
+    public ApiResponse<List<StokDto.Response>> kritik(
+            @RequestParam(defaultValue = "5") BigDecimal esik) {
+        return ApiResponse.ok(stokService.kritikList(esik));
+    }
 
     @GetMapping("/api/stok")
     public ApiResponse<List<StokDto.Response>> list(@RequestParam(required = false) String ara) {

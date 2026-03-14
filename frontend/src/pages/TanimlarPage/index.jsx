@@ -5,6 +5,7 @@ import { fetchFirmalar } from '../../services/firmalar'
 import { useSoforler, useCreateSofor, useUpdateSofor, useToggleSoforActive } from '../../hooks/useSoforler'
 import { useAraclar, useAracTurleri, useCreateArac, useUpdateArac, useToggleAracAktif } from '../../hooks/useAraclar'
 import AracBelgeleriDialog from '../../components/AracBelgeleriDialog'
+import ExportButton from '../../components/ExportButton'
 import { Pencil, FileText, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -51,14 +52,6 @@ function TurBadge({ ad }) {
 
 const DURUMLAR = ['aktif', 'yedek', 'serviste', 'satıldı', 'hurda']
 
-function flatSubeler(agac) {
-  return agac.flatMap((d) =>
-    d.bolgeler.flatMap((b) =>
-      b.subeler.map((s) => ({ id: s.id, ad: s.ad, bolgeId: b.id, bolgeAd: b.ad, depoAd: d.ad }))
-    )
-  )
-}
-
 function flatBolgeler(agac) {
   return agac.flatMap((d) => d.bolgeler.map((b) => ({ id: b.id, ad: b.ad })))
 }
@@ -78,7 +71,6 @@ function Modal({ title, onClose, onSave, saving, saveLabel = 'Kaydet', children 
     >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col"
         style={{ maxHeight: '90vh' }}>
-        {/* Header */}
         <div className="flex-none flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-sm font-bold text-gray-900">{title}</h2>
           <button
@@ -88,11 +80,9 @@ function Modal({ title, onClose, onSave, saving, saveLabel = 'Kaydet', children 
             <X size={16} />
           </button>
         </div>
-        {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {children}
         </div>
-        {/* Footer */}
         <div className="flex-none flex gap-2 px-5 py-4 border-t border-gray-100">
           <button
             type="button"
@@ -117,7 +107,7 @@ function Modal({ title, onClose, onSave, saving, saveLabel = 'Kaydet', children 
 }
 
 // ─── Şoförler ─────────────────────────────────────────────────────────────────
-const EMPTY_SOFOR = { ad_soyad: '', telefon: '', sube_id: '' }
+const EMPTY_SOFOR = { ad_soyad: '', telefon: '', bolge_id: '' }
 
 function SoforlerSection({ agac }) {
   const [modal, setModal] = useState(null)
@@ -131,7 +121,7 @@ function SoforlerSection({ agac }) {
 
   const saving = createMut.isPending || updateMut.isPending
   const error  = qError?.message ?? createMut.error?.message ?? updateMut.error?.message ?? null
-  const subeler = flatSubeler(agac)
+  const bolgeler = useMemo(() => flatBolgeler(agac), [agac])
 
   function setField(field) {
     return (e) => setModal((m) => m ? ({ ...m, form: { ...m.form, [field]: e.target.value } }) : m)
@@ -141,7 +131,7 @@ function SoforlerSection({ agac }) {
     return {
       ad_soyad: form.ad_soyad.trim(),
       telefon: form.telefon?.trim() || null,
-      sube_id: form.sube_id ? Number(form.sube_id) : null,
+      bolge_id: form.bolge_id ? Number(form.bolge_id) : null,
     }
   }
 
@@ -186,6 +176,7 @@ function SoforlerSection({ agac }) {
             </button>
           ))}
         </div>
+        <ExportButton rapor="soforler" label="Dışa Aktar" />
       </div>
 
       <button
@@ -209,7 +200,7 @@ function SoforlerSection({ agac }) {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-800">{item.ad_soyad}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {[item.telefon, item.sube?.bolge?.ad, item.sube?.ad].filter(Boolean).join(' · ') || '\u00a0'}
+                    {[item.telefon, item.bolge?.ad].filter(Boolean).join(' · ') || '\u00a0'}
                   </p>
                 </div>
                 <Badge aktif={item.aktif} />
@@ -217,7 +208,7 @@ function SoforlerSection({ agac }) {
                   <button
                     onClick={() => setModal({
                       mode: 'edit',
-                      form: { ad_soyad: item.ad_soyad, telefon: item.telefon || '', sube_id: item.sube?.id ?? '' },
+                      form: { ad_soyad: item.ad_soyad, telefon: item.telefon || '', bolge_id: item.bolge?.id ?? '' },
                       itemId: item.id,
                     })}
                     className="px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
@@ -268,13 +259,11 @@ function SoforlerSection({ agac }) {
                 />
               </div>
               <div className="col-span-2">
-                <Label text="Şube" />
-                <select value={modal.form.sube_id} onChange={setField('sube_id')} className={inputCls}>
-                  <option value="">— Şube —</option>
-                  {subeler.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.depoAd} / {s.bolgeAd} / {s.ad}
-                    </option>
+                <Label text="İl" />
+                <select value={modal.form.bolge_id} onChange={setField('bolge_id')} className={inputCls}>
+                  <option value="">— İl —</option>
+                  {bolgeler.map((b) => (
+                    <option key={b.id} value={b.id}>{b.ad}</option>
                   ))}
                 </select>
               </div>
@@ -292,7 +281,7 @@ const EMPTY_ARAC = {
   motor_gucu: '', silindir_hacmi: '', sase_no: '',
   firma_id: '',
   bos_agirlik: '', lastik_tipi: '', arvento_no: '',
-  depo_id: '', bolge_id: '', sube_id: '',
+  depo_id: '', bolge_id: '',
   onceki_plaka: '', durumu: 'aktif', aktif: true,
 }
 
@@ -304,15 +293,10 @@ function validatePlaka(raw) {
 }
 
 // ─── AracForm ──────────────────────────────────────────────────────────────────
-// Üst scope'ta tanımlanmalı — içeride tanımlanırsa her render'da yeni component
-// tipi oluşur ve React formu unmount/remount eder (focus plakaya kaçar).
 function AracForm({ form, setField, setPlakaError, plakaError, turler, agac, firmalar }) {
   const depolar = agac
   const bolgeler = form.depo_id
     ? (depolar.find((d) => String(d.id) === String(form.depo_id))?.bolgeler ?? [])
-    : []
-  const subeler = form.bolge_id
-    ? (bolgeler.find((b) => String(b.id) === String(form.bolge_id))?.subeler ?? [])
     : []
 
   return (
@@ -382,20 +366,11 @@ function AracForm({ form, setField, setPlakaError, plakaError, turler, agac, fir
           </select>
         </div>
         <div>
-          <Label text="Bölge" />
+          <Label text="İl" />
           <select value={form.bolge_id} onChange={setField('bolge_id')} className={inputCls} disabled={!form.depo_id}>
-            <option value="">— Bölge —</option>
+            <option value="">— İl —</option>
             {bolgeler.map((b) => (
               <option key={b.id} value={b.id}>{b.ad}</option>
-            ))}
-          </select>
-        </div>
-        <div className="col-span-2">
-          <Label text="Şube" />
-          <select value={form.sube_id} onChange={setField('sube_id')} className={inputCls} disabled={!form.bolge_id}>
-            <option value="">— Şube —</option>
-            {subeler.map((s) => (
-              <option key={s.id} value={s.id}>{s.ad}</option>
             ))}
           </select>
         </div>
@@ -473,7 +448,6 @@ function AraclarSection({ agac, firmalar }) {
   const [filterAktif, setFilterAktif] = useState('hepsi')
   const [filterFirma, setFilterFirma] = useState('')
   const [filterBolge, setFilterBolge] = useState('')
-  const [filterSube, setFilterSube] = useState('')
   const [ara, setAra] = useState('')
   const [modal, setModal] = useState(null)
   const [plakaError, setPlakaError] = useState(null)
@@ -488,33 +462,26 @@ function AraclarSection({ agac, firmalar }) {
   const error  = qError?.message ?? createMut.error?.message ?? updateMut.error?.message ?? null
 
   const bolgeler = useMemo(() => flatBolgeler(agac), [agac])
-  const subeSecenekleri = useMemo(
-    () => flatSubeler(agac).filter((s) => !filterBolge || String(s.bolgeId) === filterBolge),
-    [agac, filterBolge]
-  )
 
   const visible = useMemo(() => items.filter((a) => {
     if (filterTur !== 'hepsi' && a.tur?.ad !== filterTur) return false
     if (filterAktif === 'aktif' && !a.aktif) return false
     if (filterAktif === 'pasif' && a.aktif) return false
     if (filterFirma && String(a.firma?.id) !== filterFirma) return false
-    if (filterBolge && String(a.sube?.bolge?.id) !== filterBolge) return false
-    if (filterSube && String(a.sube?.id) !== filterSube) return false
+    if (filterBolge && String(a.bolge?.id) !== filterBolge) return false
     if (ara) {
       const q = ara.toLowerCase()
       if (!a.plaka?.toLowerCase().includes(q) && !a.marka?.toLowerCase().includes(q)) return false
     }
     return true
-  }), [items, filterTur, filterAktif, filterFirma, filterBolge, filterSube, ara])
+  }), [items, filterTur, filterAktif, filterFirma, filterBolge, ara])
 
-  // Modal field setter with cascade logic
   function setField(field) {
     return (e) => setModal((m) => {
       if (!m) return m
       const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
       const next = { ...m.form, [field]: value }
-      if (field === 'depo_id') { next.bolge_id = ''; next.sube_id = '' }
-      if (field === 'bolge_id') { next.sube_id = '' }
+      if (field === 'depo_id') { next.bolge_id = '' }
       return { ...m, form: next }
     })
   }
@@ -535,7 +502,7 @@ function AraclarSection({ agac, firmalar }) {
       bos_agirlik: form.bos_agirlik ? Number(form.bos_agirlik) : null,
       lastik_tipi: form.lastik_tipi || null,
       arvento_no: form.arvento_no ? Number(form.arvento_no) : null,
-      sube_id: form.sube_id ? Number(form.sube_id) : null,
+      bolge_id: form.bolge_id ? Number(form.bolge_id) : null,
       onceki_plaka: form.onceki_plaka || null,
       durumu: form.durumu || 'aktif',
     }
@@ -583,9 +550,8 @@ function AraclarSection({ agac, firmalar }) {
         bos_agirlik: item.bos_agirlik ?? '',
         lastik_tipi: item.lastik_tipi ?? '',
         arvento_no: item.arvento_no ?? '',
-        depo_id: item.sube?.bolge?.depo?.id ?? '',
-        bolge_id: item.sube?.bolge?.id ?? '',
-        sube_id: item.sube?.id ?? '',
+        depo_id: item.bolge?.depo?.id ?? '',
+        bolge_id: item.bolge?.id ?? '',
         onceki_plaka: item.onceki_plaka ?? '',
         durumu: item.durumu ?? 'aktif',
         aktif: item.aktif ?? true,
@@ -613,14 +579,14 @@ function AraclarSection({ agac, firmalar }) {
             </button>
           ))}
         </div>
+        <ExportButton rapor="araclar" label="Dışa Aktar" />
       </div>
 
-      {/* Firma / Bölge / Şube */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* Firma / İl */}
+      <div className="grid grid-cols-2 gap-2">
         {[
           { value: filterFirma, set: setFilterFirma, placeholder: 'Firma', opts: firmalar.map((f) => ({ id: f.id, ad: f.ad })) },
-          { value: filterBolge, set: (v) => { setFilterBolge(v); setFilterSube('') }, placeholder: 'Bölge', opts: bolgeler },
-          { value: filterSube, set: setFilterSube, placeholder: 'Şube', opts: subeSecenekleri },
+          { value: filterBolge, set: setFilterBolge, placeholder: 'İl', opts: bolgeler },
         ].map(({ value, set, placeholder, opts }) => (
           <select key={placeholder} value={value} onChange={(e) => set(e.target.value)}
             className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600">
@@ -670,7 +636,7 @@ function AraclarSection({ agac, firmalar }) {
                 <div className="flex-1 min-w-0">
                   <p className={`font-mono font-bold text-sm ${item.aktif ? 'text-blue-700' : 'text-red-400'}`}>{item.plaka}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {[item.marka, item.model_yili, item.firma?.ad, item.sube?.ad].filter(Boolean).join(' · ') || '\u00a0'}
+                    {[item.marka, item.model_yili, item.firma?.ad, item.bolge?.ad].filter(Boolean).join(' · ') || '\u00a0'}
                   </p>
                 </div>
                 <TurBadge ad={item.tur?.ad} />

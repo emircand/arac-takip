@@ -16,3 +16,7 @@ export function updateStok(id, data) {
 export function stokGiris(id, data) {
   return api.post(`/api/stok/${id}/giris`, data)
 }
+
+export function fetchKritikStok(esik = 5) {
+  return api.get(`/api/stok/kritik?esik=${esik}`)
+}

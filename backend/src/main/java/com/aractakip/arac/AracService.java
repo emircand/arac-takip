@@ -3,7 +3,7 @@ package com.aractakip.arac;
 import com.aractakip.arac.dto.AracRequest;
 import com.aractakip.common.AktifRequest;
 import com.aractakip.firma.FirmaRepository;
-import com.aractakip.lokasyon.SubeRepository;
+import com.aractakip.lokasyon.BolgeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +17,7 @@ public class AracService {
 
     private final AracRepository aracRepository;
     private final AracTuruRepository aracTuruRepository;
-    private final SubeRepository subeRepository;
+    private final BolgeRepository bolgeRepository;
     private final FirmaRepository firmaRepository;
 
     public List<Arac> getAll(String tur, Boolean aktif) {
@@ -90,7 +90,7 @@ public class AracService {
         arac.setBosAgirlik(req.bosAgirlik());
         arac.setLastikTipi(trim(req.lastikTipi()));
         arac.setArventoNo(req.arventoNo());
-        arac.setSube(req.subeId() != null ? subeRepository.getReferenceById(req.subeId()) : null);
+        arac.setBolge(req.bolgeId() != null ? bolgeRepository.getReferenceById(req.bolgeId()) : null);
         arac.setOncekiPlaka(normalizeKod(req.oncekiPlaka()));
         if (req.durumu() != null) arac.setDurumu(req.durumu());
     }

@@ -16,6 +16,7 @@ export default function SearchableSelect({
   options = [],
   placeholder = '— Seçin —',
   required = false,
+  disabled = false,
 }) {
   const selected = options.find((o) => o.id === value) ?? null
 
@@ -39,6 +40,7 @@ export default function SearchableSelect({
     selectOnFocus: true,
     clearOnBlur: false,
     openOnFocus: true,
+    disabled,
   })
 
   const inputProps = getInputProps()
@@ -49,8 +51,11 @@ export default function SearchableSelect({
         {...inputProps}
         placeholder={selected ? selected.label : placeholder}
         required={required}
-        className={`w-full border rounded-xl px-4 py-3 text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-          focused ? 'border-blue-500' : 'border-gray-200'
+        disabled={disabled}
+        className={`w-full border rounded-xl px-4 py-3 text-sm transition-all ${
+          disabled
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200 opacity-60'
+            : `bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${focused ? 'border-blue-500' : 'border-gray-200'}`
         }`}
       />
 

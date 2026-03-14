@@ -47,6 +47,9 @@ public class Yakit {
     @Column(nullable = false)
     private boolean anomali = false;
 
+    @Column(name = "anomali_tipi", length = 50)
+    private String anomaliTipi;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 }

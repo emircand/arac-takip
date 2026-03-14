@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -122,24 +123,87 @@ public class YakitService {
                         set -> set.isEmpty() ? Collections.emptySet() : yakitRepository.findExistingUttsNos(set)
                 ));
 
-        List<Yakit> entities = rows.stream()
-                .filter(r -> !r.duplika())                                              // frontend işareti
-                .filter(r -> r.uttsNo() == null || !mevcutUttsNos.contains(r.uttsNo())) // backend teyit
-                .map(r -> {
-                    Yakit y = new Yakit();
-                    y.setArac(aracRepository.getReferenceById(r.aracId()));
-                    y.setTarih(r.tarih());
-                    y.setMiktarLt(r.miktarLt());
-                    y.setTutar(r.tutar());
-                    y.setIstasyon(r.istasyon());
-                    y.setIstasyonIli(r.istasyonIli());
-                    y.setUttsNo(r.uttsNo());
-                    y.setAnomali(false);
-                    return y;
-                }).toList();
+        List<YakitDto.Row> temizRows = rows.stream()
+                .filter(r -> !r.duplika())
+                .filter(r -> r.uttsNo() == null || !mevcutUttsNos.contains(r.uttsNo()))
+                .toList();
+
+        if (temizRows.isEmpty()) return 0;
+
+        // ── Anomali tespiti için ön yükleme ──────────────────────────────────────
+        Set<UUID> aracIds = temizRows.stream().map(YakitDto.Row::aracId).collect(Collectors.toSet());
+        Map<UUID, Arac> aracMap = aracRepository.findAllById(aracIds)
+                .stream().collect(Collectors.toMap(Arac::getId, a -> a));
+
+        // Hızlı dolum: DB'de son 24 saatlik kayıtları çek (batch'in en erken tarihinden 4h öncesinden)
+        LocalDateTime enErkentarih = temizRows.stream().map(YakitDto.Row::tarih)
+                .min(LocalDateTime::compareTo).orElse(LocalDateTime.now()).minusHours(4);
+        Map<UUID, List<LocalDateTime>> dbTarihMap = new HashMap<>();
+        yakitRepository.findAracIdVeTarihByAracIdsAndTarihAfter(aracIds, enErkentarih)
+                .forEach(row -> {
+                    UUID aid = (UUID) row[0];
+                    LocalDateTime t = (LocalDateTime) row[1];
+                    dbTarihMap.computeIfAbsent(aid, k -> new ArrayList<>()).add(t);
+                });
+
+        // Batch içi hızlı dolum takibi: araç başına işlenmiş tarihler
+        Map<UUID, List<LocalDateTime>> batchTarihMap = new HashMap<>();
+
+        List<Yakit> entities = new ArrayList<>();
+        for (YakitDto.Row r : temizRows) {
+            Yakit y = new Yakit();
+            Arac arac = aracMap.get(r.aracId());
+            y.setArac(arac != null ? arac : aracRepository.getReferenceById(r.aracId()));
+            y.setTarih(r.tarih());
+            y.setMiktarLt(r.miktarLt());
+            y.setTutar(r.tutar());
+            y.setIstasyon(r.istasyon());
+            y.setIstasyonIli(r.istasyonIli());
+            y.setUttsNo(r.uttsNo());
+
+            String anomaliTipi = tespit(r, arac, dbTarihMap, batchTarihMap);
+            y.setAnomaliTipi(anomaliTipi);
+            y.setAnomali(anomaliTipi != null);
+
+            // Bu kaydı batch map'e ekle (sonraki kayıtlar için hızlı dolum kontrolü)
+            batchTarihMap.computeIfAbsent(r.aracId(), k -> new ArrayList<>()).add(r.tarih());
+
+            entities.add(y);
+        }
 
         yakitRepository.saveAll(entities);
         return entities.size();
+    }
+
+    /** Tek bir yakıt kaydı için anomali tipi döndür — öncelik sırası: hayalet > hızlı > mesai > güzergah */
+    private String tespit(YakitDto.Row r, Arac arac,
+                           Map<UUID, List<LocalDateTime>> dbTarihMap,
+                           Map<UUID, List<LocalDateTime>> batchTarihMap) {
+        // 1. Hayalet yakıt: miktar > tank_kapasitesi × 1.1
+        if (arac != null && arac.getTur() != null && arac.getTur().getTankKapasitesiLt() != null) {
+            BigDecimal limit = BigDecimal.valueOf(arac.getTur().getTankKapasitesiLt() * 1.1);
+            if (r.miktarLt().compareTo(limit) > 0) return "hayalet_yakit";
+        }
+
+        // 2. Hızlı dolum: aynı araç son 4 saatte başka kayıt var mı?
+        List<LocalDateTime> dbTarihler = dbTarihMap.getOrDefault(r.aracId(), Collections.emptyList());
+        List<LocalDateTime> batchTarihler = batchTarihMap.getOrDefault(r.aracId(), Collections.emptyList());
+        boolean hizliDolum = dbTarihler.stream().anyMatch(t -> Math.abs(java.time.Duration.between(t, r.tarih()).toHours()) < 4)
+                || batchTarihler.stream().anyMatch(t -> Math.abs(java.time.Duration.between(t, r.tarih()).toHours()) < 4);
+        if (hizliDolum) return "hizli_dolum";
+
+        // 3. Mesai dışı: 22:00–06:00 veya pazar
+        int hour = r.tarih().getHour();
+        if (hour >= 22 || hour < 6 || r.tarih().getDayOfWeek() == DayOfWeek.SUNDAY) return "mesai_disi";
+
+        // 4. Güzergah dışı: istasyon ili, araç bölgesiyle eşleşmiyor
+        if (arac != null && r.istasyonIli() != null && arac.getBolge() != null) {
+            String bolgeAd = arac.getBolge().getAd().toUpperCase(Locale.ROOT).trim();
+            String il = r.istasyonIli().toUpperCase(Locale.ROOT).trim();
+            if (!il.contains(bolgeAd) && !bolgeAd.contains(il)) return "guzergah_disi";
+        }
+
+        return null;
     }
 
     /** Tüm kayıtları listele (opsiyonel araç filtresi) */
@@ -163,7 +227,8 @@ public class YakitService {
                 y.getIstasyon(),
                 y.getIstasyonIli(),
                 y.getUttsNo(),
-                y.isAnomali()
+                y.isAnomali(),
+                y.getAnomaliTipi()
         );
     }
 

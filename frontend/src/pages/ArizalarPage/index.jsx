@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ExportButton from '../../components/ExportButton'
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Table, TableBody, TableCell, TableHead, TableRow, Paper,
@@ -483,12 +484,15 @@ export default function ArizalarPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-      <div className="flex items-center gap-3">
-        <Wrench size={28} className="text-blue-600" />
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Arızalar</h1>
-          <p className="text-sm text-gray-500">Araç arıza ve bakım takip sistemi</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Wrench size={28} className="text-blue-600" />
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Arızalar</h1>
+            <p className="text-sm text-gray-500">Araç arıza ve bakım takip sistemi</p>
+          </div>
         </div>
+        <ExportButton rapor="arizalar" label="Dışa Aktar" />
       </div>
 
       {/* Filtreler */}

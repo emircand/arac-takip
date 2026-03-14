@@ -4,7 +4,6 @@ import com.aractakip.arac.AracRepository;
 import com.aractakip.belge.dto.AracBelgeDto;
 import com.aractakip.belge.dto.AracBelgeRequest;
 import com.aractakip.belge.dto.YaklasanBelgeDto;
-import com.aractakip.lokasyon.Sube;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -84,7 +83,7 @@ public class AracBelgeService {
         return new AracBelgeDto.DurumSayim(valid, warning, critical, expired);
     }
 
-    public List<YaklasanBelgeDto> getYaklasan(int gun, String belgeTuru, Integer subeId, Integer bolgeId, String siralama) {
+    public List<YaklasanBelgeDto> getYaklasan(int gun, String belgeTuru, Integer bolgeId, String siralama) {
         List<AracBelge> guncel = belgeRepository.findTumGuncel();
 
         Comparator<AracBelge> comparator;
@@ -94,8 +93,8 @@ public class AracBelgeService {
                     .thenComparingLong(AracBelge::getKalanGun);
         } else if ("bolge".equals(sort)) {
             comparator = Comparator.comparing((AracBelge b) -> {
-                Sube s = b.getArac().getSube();
-                return s != null && s.getBolge() != null ? s.getBolge().getAd() : "";
+                var bolge = b.getArac().getBolge();
+                return bolge != null ? bolge.getAd() : "";
             });
         } else {
             comparator = Comparator.comparingLong(AracBelge::getKalanGun);
@@ -104,10 +103,8 @@ public class AracBelgeService {
         return guncel.stream()
                 .filter(b -> b.getKalanGun() <= gun)
                 .filter(b -> belgeTuru == null || belgeTuru.isBlank() || b.getBelgeTuru().equals(belgeTuru))
-                .filter(b -> subeId == null || (b.getArac().getSube() != null && subeId.equals(b.getArac().getSube().getId())))
-                .filter(b -> bolgeId == null || (b.getArac().getSube() != null
-                        && b.getArac().getSube().getBolge() != null
-                        && bolgeId.equals(b.getArac().getSube().getBolge().getId())))
+                .filter(b -> bolgeId == null || (b.getArac().getBolge() != null
+                        && bolgeId.equals(b.getArac().getBolge().getId())))
                 .sorted(comparator)
                 .map(this::toYaklasanDto)
                 .toList();
@@ -116,8 +113,7 @@ public class AracBelgeService {
     private YaklasanBelgeDto toYaklasanDto(AracBelge b) {
         BelgeDurum durum = b.getDurum();
         var arac = b.getArac();
-        var sube = arac.getSube();
-        var bolge = sube != null ? sube.getBolge() : null;
+        var bolge = arac.getBolge();
         var depo = bolge != null ? bolge.getDepo() : null;
         var firma = arac.getFirma();
         return new YaklasanBelgeDto(
@@ -130,8 +126,8 @@ public class AracBelgeService {
                 arac.getId(),
                 arac.getPlaka(),
                 arac.getTur() != null ? arac.getTur().getAd() : null,
-                sube != null ? sube.getId() : null,
-                sube != null ? sube.getAd() : null,
+                null,
+                null,
                 bolge != null ? bolge.getAd() : null,
                 depo != null ? depo.getAd() : null,
                 firma != null ? firma.getId() : null,

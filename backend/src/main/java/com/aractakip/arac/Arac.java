@@ -1,7 +1,7 @@
 package com.aractakip.arac;
 
 import com.aractakip.firma.Firma;
-import com.aractakip.lokasyon.Sube;
+import com.aractakip.lokasyon.Bolge;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -66,8 +66,8 @@ public class Arac {
     private Integer arventoNo;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "sube_id")
-    private Sube sube;
+    @JoinColumn(name = "bolge_id")
+    private Bolge bolge;
 
     @Column(name = "onceki_plaka", length = 20)
     private String oncekiPlaka;

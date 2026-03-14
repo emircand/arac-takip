@@ -8,6 +8,7 @@ import java.util.UUID;
 public record SeferRequest(
         LocalDate tarih,
         String bolge,
+        Integer subeId,
         UUID cekiciId,
         UUID dorseId,
         UUID soforId,

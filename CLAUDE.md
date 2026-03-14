@@ -32,8 +32,8 @@ backend/src/main/java/com/aractakip/
 
 ```bash
 # Backend
-cd backend && ./mvnw spring-boot:run
-./mvnw test
+cd backend && mvn spring-boot:run
+mvn test
 
 # Frontend
 cd frontend && npm run dev

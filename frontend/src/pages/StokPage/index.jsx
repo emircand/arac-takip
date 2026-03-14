@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ExportButton from '../../components/ExportButton'
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Table, TableBody, TableCell, TableHead, TableRow, Paper,
@@ -137,12 +138,15 @@ export default function StokPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-      <div className="flex items-center gap-3">
-        <Package size={28} className="text-blue-600" />
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Stok Yönetimi</h1>
-          <p className="text-sm text-gray-500">Parça ve malzeme envanteri</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Package size={28} className="text-blue-600" />
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Stok Yönetimi</h1>
+            <p className="text-sm text-gray-500">Parça ve malzeme envanteri</p>
+          </div>
         </div>
+        <ExportButton rapor="stok" label="Dışa Aktar" />
       </div>
 
       {/* Arama + Yeni */}

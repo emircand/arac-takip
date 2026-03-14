@@ -11,8 +11,9 @@ export default function NavBar() {
     ...(isYonetici ? [
       { to: '/tanimlar',  label: 'Tanımlar',  icon: '📋' },
       { to: '/stok',      label: 'Stok',      icon: '📦' },
-      { to: '/yakit',     label: 'Yakıt',     icon: '⛽' },
-      { to: '/dashboard', label: 'Dashboard', icon: '📊' },
+      { to: '/yakit',          label: 'Yakıt',       icon: '⛽' },
+      { to: '/yakit-analitik', label: 'Analitik',    icon: '📈' },
+      { to: '/dashboard',      label: 'Dashboard',   icon: '📊' },
     ] : []),
   ]
 

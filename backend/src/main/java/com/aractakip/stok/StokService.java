@@ -26,6 +26,12 @@ public class StokService {
     }
 
     @Transactional(readOnly = true)
+    public List<StokDto.Response> kritikList(BigDecimal esik) {
+        return stokKalemRepository.findKritik(esik)
+                .stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<StokDto.Response> ara(String q) {
         return stokKalemRepository.findByStokAdiContainingIgnoreCaseOrderByStokAdiAsc(q)
                 .stream().map(this::toResponse).toList();

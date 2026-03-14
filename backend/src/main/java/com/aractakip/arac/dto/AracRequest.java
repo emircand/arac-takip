@@ -18,7 +18,7 @@ public record AracRequest(
         Integer bosAgirlik,
         String lastikTipi,
         Integer arventoNo,
-        Integer subeId,
+        Integer bolgeId,
         String oncekiPlaka,
         String durumu
 ) {}

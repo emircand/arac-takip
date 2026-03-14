@@ -11,7 +11,8 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const TanimlarPage  = lazy(() => import('./pages/TanimlarPage'))
 const YakitPage     = lazy(() => import('./pages/YakitPage'))
 const ArizalarPage  = lazy(() => import('./pages/ArizalarPage'))
-const StokPage      = lazy(() => import('./pages/StokPage'))
+const StokPage          = lazy(() => import('./pages/StokPage'))
+const YakitAnalitikPage = lazy(() => import('./pages/YakitAnalitikPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -109,6 +110,17 @@ export default function App() {
                 <ProtectedRoute requiredRole="yonetici">
                   <Layout>
                     <Suspense fallback={<PageSpinner />}><StokPage /></Suspense>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/yakit-analitik"
+              element={
+                <ProtectedRoute requiredRole="yonetici">
+                  <Layout>
+                    <Suspense fallback={<PageSpinner />}><YakitAnalitikPage /></Suspense>
                   </Layout>
                 </ProtectedRoute>
               }

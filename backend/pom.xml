@@ -75,11 +75,18 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Apache POI — Excel import -->
+        <!-- Apache POI — Excel import/export -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>5.3.0</version>
+        </dependency>
+
+        <!-- OpenPDF — PDF export (LGPL) -->
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
+            <version>2.0.3</version>
         </dependency>
 
         <!-- Test -->
